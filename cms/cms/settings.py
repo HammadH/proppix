@@ -86,4 +86,12 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+XML_ROOT = os.path.join(BASE_DIR, 'xml/')
+
+DBZ_HOURLY_XML = XML_ROOT + 'dbz_hourly.xml'
+DBZ_FULL_XML = XML_ROOT + 'dbz_full.xml'
+
+DOMAIN_NAME = 'http://www.prop-pix.com/'
+
+
 MEDIA_URL = 'media/'
