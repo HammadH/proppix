@@ -12,8 +12,12 @@ from bs4 import BeautifulSoup, CData
 bufsize = 0 # making file unbuffered
 
 
+class IssmoDubizzleFull(View):
+	def get(self, request, *args, **kwargs):
+		return HttpResponse(open(settings.DBZ_FULL_XML).read(), content_type="text/xml; charset=utf-8")
 
-class Dubizzle(View):
+	
+class IssmoDubizzleLive(View):
 
 	def get(self, request, *args, **kwargs):
 		return HttpResponse(open(settings.DBZ_HOURLY_XML).read(), content_type="text/xml; charset=utf-8")
@@ -44,6 +48,7 @@ class Dubizzle(View):
 				existing_listing = feed_file_soup.find('refno', text=ref_no)
 				dbz_feed = dbz_soup.new_tag('dubizzlepropertyfeed')
 				feed_file = open(settings.DBZ_HOURLY_XML, 'wb', bufsize)
+				full_dump_file = open(settings.DBZ_FULL_XML, 'wb', bufsize)
 				if existing_listing:
 					print 'listing already present'
 					existing_listing.parent.decompose()
@@ -52,12 +57,15 @@ class Dubizzle(View):
 					dbz_feed.append(feed_file_soup)
 					print 'adding %s' %feed_file_soup
 					feed_file.write(str(dbz_feed))
+					full_dump_file.write(str(dbz_feed))
+
 				else:
 					print 'new listing'
 					feed_file_soup.append(dbz_soup)
 					print '%s' %dbz_soup
 					dbz_feed.append(feed_file_soup)
 					feed_file.write(str(dbz_feed))
+					full_dump_file.write(str(dbz_feed))
 
 				return HttpResponse(status=201)
 						#return HttpResponse(dbz_soup, content_type="application/xhtml+xml")

@@ -8,7 +8,9 @@ import views
 
 urlpatterns = patterns('',
     # Examples:
-    url(r'^cms/$', csrf_exempt(views.Dubizzle.as_view()), name='dbz'),
+    url(r'^cms/issmo/live/$', csrf_exempt(views.IssmoDubizzleLive.as_view()), name='issmo_dbz_live'),
+    url(r'^cms/issmo/full/$', csrf_exempt(views.IssmoDubizzleFull.as_view()), name='issmo_dbz_full'),
+
     # url(r'^blog/', include('blog.urls')),
 
     url(r'^admin/', include(admin.site.urls)),
