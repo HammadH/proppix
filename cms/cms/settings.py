@@ -91,6 +91,9 @@ XML_ROOT = os.path.join(BASE_DIR, 'xml/')
 DBZ_HOURLY_XML = XML_ROOT + 'dbz_hourly.xml'
 DBZ_FULL_XML = XML_ROOT + 'dbz_full.xml'
 
+PF_HOURLY_XML = XML_ROOT + 'pf_hourly.xml'
+PF_FULL_XML = XML_ROOT + 'pf_full.xml'
+
 DOMAIN_NAME = 'http://www.prop-pix.com/'
 
 

@@ -8,8 +8,10 @@ import views
 
 urlpatterns = patterns('',
     # Examples:
-    url(r'^cms/issmo/live/$', csrf_exempt(views.IssmoDubizzleLive.as_view()), name='issmo_dbz_live'),
-    url(r'^cms/issmo/full/$', csrf_exempt(views.IssmoDubizzleFull.as_view()), name='issmo_dbz_full'),
+    url(r'^cms/issmo_dbz/live/$', csrf_exempt(views.IssmoDubizzleLive.as_view()), name='issmo_dbz_live'),
+    url(r'^cms/issmo_dbz/full/$', csrf_exempt(views.IssmoDubizzleFull.as_view()), name='issmo_dbz_full'),
+    url(r'^cms/issmo_pf/live/$', csrf_exempt(views.IssmoPropertyFinderLive.as_view()), name='issmo_pf_live'),
+    url(r'^cms/issmo_pf/full/$', csrf_exempt(views.IssmoPropertyFinderFull.as_view()), name='issmo_pf_full'),
 
     # url(r'^blog/', include('blog.urls')),
 

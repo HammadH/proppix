@@ -7,9 +7,13 @@ from django.conf import settings
 from django.views.generic import View
 from django.http import HttpResponse, Http404
 
+
 from bs4 import BeautifulSoup, CData
 
 bufsize = 0 # making file unbuffered
+
+
+DALY = 'daly@propertyissmo.com'
 
 
 class IssmoDubizzleFull(View):
@@ -284,7 +288,6 @@ def convert_to_dbz(soup):
 		
 		## bedroosm ##                        
 		bedrooms = soup.find('bedrooms')
-		print subtype_tag.text
 		if subtype_tag.text in VILLA or subtype_tag.text in APARTMENT:
 			bedrooms_tag = dbz_soup.new_tag('bedrooms')
 			if bedrooms.text:
@@ -292,12 +295,7 @@ def convert_to_dbz(soup):
 			else:
 				bedrooms_tag.append('0')
 				property_tag.append(bedrooms_tag)
-			print bedrooms.text
-			print bedrooms_tag
-			print property_tag
-		
-	
-		print 'passed bedrooms'
+
 		## bathrooms ##
 		bathrooms = soup.find('bathtotal')
 		if bathrooms.text:
@@ -393,30 +391,278 @@ def build_images(images, refno):
 		image_urls = []
 		for image in images:
 				try:
-						content_type = image.contenttype.text
-						encoded_data = image.binarydata.string.replace(' ','+')
-						print 'decoding'
-						decoded_data = encoded_data.decode('base64')
-						imgfile = StringIO(decoded_data)
-						print 'imgfile decoded'
-						img = Image.open(imgfile)
-						print 'image opening'
-						imgId = image.pictureid.text.strip('{,}')
-						imgCaption = image.picturecaption.text
-						print 'calling build_paths'
-						img_paths = build_image_path(refno, imgId, imgCaption)
-						print 'building full_image_path'
-						full_img_path = img_paths['full_img_path'] + '.' + content_type.lower()
-						try:
-								print 'saving image %s' %full_img_path
-								img.save(full_img_path)
-								print 'save comple.'
-								image_xml_url = settings.DOMAIN_NAME + img_paths['media_path'] + '.' + content_type.lower()
-								image_urls.append(image_xml_url)
-								print image_urls
-						except Exception, e:
-								continue
+					content_type = image.contenttype.text
+					encoded_data = image.binarydata.string.replace(' ','+')
+					decoded_data = encoded_data.decode('base64')
+					imgfile = StringIO(decoded_data)
+					img = Image.open(imgfile)
+					imgId = image.pictureid.text.strip('{,}')
+					imgCaption = image.picturecaption.text
+					img_paths = build_image_path(refno, imgId, imgCaption)
+					full_img_path = img_paths['full_img_path'] + '.' + content_type.lower()
+					try:
+						image_exists = file(full_img_path, 'r')
+					except IOError:
+						print 'saving image %s' %full_img_path
+						img.save(full_img_path)
+						print 'save comple.'
+					image_xml_url = settings.DOMAIN_NAME + img_paths['media_path'] + '.' + content_type.lower()
+					image_urls.append(image_xml_url)
 				except Exception,e:
-						print e
 						continue
 		return image_urls
+
+
+
+
+class IssmoPropertyFinderFull(View):
+	def get(self, request, *args, **kwargs):
+		pass
+
+
+class IssmoPropertyFinderLive(View):
+	def get(self, request, *args, **kwargs):
+		return HttpResponse(open(settings.PF_HOURLY_XML), content_type="text/xml; charset=utf-8")
+
+	def post(self, request, *args, **kwargs):
+		
+		soup = BeautifulSoup(str(request.POST))
+		pf_soup = convert_to_pf(soup)
+		if pf_soup is not None:
+			pf_soup, operation = pf_soup[0], pf_soup[1]
+			feed_file = open(settings.PF_HOURLY_XML, 'rb+', bufsize)
+			feed_file_soup = BeautifulSoup(feed_file)
+			try:
+				feed_file_soup.list.unwrap()
+			except AttributeError:
+				pass
+			
+			output_feed_file = open(settings.PF_HOURLY_XML, 'wb+', bufsize)
+			full_dump_file = open(settings.PF_FULL_XML, 'wb+', bufsize)
+
+			pf_feed = pf_soup.new_tag('list')
+			pf_feed.append(feed_file_soup)
+
+			if operation == "APPEND/REPLACE":				
+				reference_number = pf_soup.find('reference_number').text
+			elif operation == "REMOVE":
+				reference_number = pf_soup.find('mlsnumber').text
+			existing_listing = feed_file_soup.find('reference_number', text=reference_number)
+			if operation == "APPEND/REPLACE" and existing_listing:
+				existing_listing.parent.decompose()
+				feed_file_soup.append(pf_soup)
+			elif operation == "REMOVE" and existing_listing:
+				existing_listing.parent.decompose()
+			elif operation == "APPEND/REPLACE" and not existing_listing:
+				feed_file_soup.append(pf_soup)
+			
+			pf_feed.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+			pf_feed.attrs['listing_count'] = len(pf_feed.find_all('property'))
+			output_feed_file.write(str(pf_feed))
+			full_dump_file.write(str(pf_feed))
+			return HttpResponse(status=201)
+		else:
+			return Http404('pf soup returned None')
+
+def convert_to_pf(soup):
+	pf_soup = BeautifulSoup("<property last_update=''></property>")
+	property_tag = pf_soup.property
+	
+	operation = "APPEND/REPLACE"
+
+	#status
+	status = soup.find('listingstatus')
+	if status:
+		if status.text != "Active":
+			operation = "REMOVE"
+			return (soup, operation)
+
+	# reference 
+	reference = soup.find('mlsnumber')
+	if reference:
+		reference_number = reference.text
+		reference_number_tag = pf_soup.new_tag('reference_number')
+		reference_number_tag.append(CData(reference_number))
+		property_tag.append(reference_number_tag)
+	else:
+		# message = "Missing reference no!"
+		# if  pf_soup.find('email') is not None:
+		# 	_to = pf_soup.find('email').text
+		# else:
+		# 	_to = DALY
+		# send_mail(message, str(pf_soup), _to)
+		return None
+
+	#offering type
+	codes = reference.text.split('-')
+	if codes[0] in TYPE_RENT:
+		if codes[1] in APARTMENT or codes[1] in VILLA:
+			offering_type = 'RR'
+		elif codes[1] in SUBTYPE_COMMERCIAL:
+			offering_type = 'CR'
+	elif codes[0] in TYPE_SALE:
+		if codes[1] in APARTMENT or codes[1] in VILLA:
+			offering_type = 'RS'
+		elif codes[1] in SUBTYPE_COMMERCIAL:
+			offering_type = 'CS'
+	if offering_type:
+		offering_type_tag = pf_soup.new_tag('offering_type')
+		offering_type_tag.append(CData(offering_type))
+		property_tag.append(offering_type_tag)
+	else:
+		return None
+
+	# property_type
+	if codes[1]:
+		if codes[1] in APARTMENT:
+			property_type = 'AP'
+		elif codes[1] in VILLA:
+			property_type = 'VH'
+		elif codes[1] in SUBTYPE_COMMERCIAL:
+			property_type = 'CO'
+		property_type_tag = pf_soup.new_tag('property_type')
+		property_type_tag.append(CData(property_type))
+		property_tag.append(property_type_tag)
+
+	# price
+	price = soup.find('listprice')
+	if price:
+		price_tag = pf_soup.new_tag('price')
+		price_tag.append(CData(price.text))
+		property_tag.append(price_tag)
+	else:
+		return None
+
+	#city
+	city = soup.find('city')
+	if city:
+		city_tag = pf_soup.new_tag('city')
+		city_tag.append(CData(city.text))
+		property_tag.append(city_tag)
+
+
+	# community
+	community = soup.find('listingarea')
+	if community:
+		community_tag = pf_soup.new_tag('community')
+		community_tag.append(CData(community.text))
+		property_tag.append(community_tag)
+
+	# building
+	building = soup.find('buildingfloor')
+	if building:
+		property_name_tag = pf_soup.new_tag('property_name')
+		property_name_tag.append(CData(building.text))
+		property_tag.append(building)
+
+	# title
+	title = soup.find('streetname')
+	if title:
+		title_tag = pf_soup.new_tag('title_en')
+		title_tag.append(CData(title.text))
+		property_tag.append(title_tag)
+	else:
+		return None
+
+	# description
+	description = soup.find('publicremark')
+	if description:
+		description_tag = pf_soup.new_tag('description_en')
+		description_tag.append(CData(description.text))
+		property_tag.append(description_tag)
+
+	# amenities
+	# read from features
+
+	# views
+	# read from features
+
+	# size
+	size = soup.find('squarefeet')
+	if size:
+		size_tag = pf_soup.new_tag('size')
+		size_tag.append(CData(size.text))
+		property_tag.append(size_tag)
+
+	# bedroom
+	bedrooms = soup.find('bedrooms')
+	if bedrooms:
+		bedrooms_tag = pf_soup.new_tag('bedroom')
+		bedrooms_tag.append(bedrooms.text)
+		property_tag.append(bedrooms_tag)
+
+	# bathrooms
+	bathrooms = soup.find('bathtotal')
+	if bathrooms:
+		bathrooms_tag = pf_soup.new_tag('bathroom')
+		bathrooms_tag.append(bathrooms.text)
+		property_tag.append(bathrooms_tag)
+
+	# agent
+	agent = soup.find('reagent')
+	if agent:
+		agent_tag = pf_soup.new_tag('agent')
+		
+		#name
+		if agent.firstname:
+			firstname = agent.firstname.text
+		if agent.lastname:
+			lastname = agent.lastname.text
+		agent_name = firstname + ' ' + lastname
+		agent_name_tag = pf_soup.new_tag('name')
+		agent_name_tag.append(CData(agent_name))
+		agent_tag.append(agent_name_tag)
+
+		#email
+		if agent.email:
+			email_tag = pf_soup.new_tag('email')
+			email_tag.append(CData(agent.email.text))
+			agent_tag.append(email_tag)
+
+		#phone
+		if agent.cellphone:
+			cellphone_tag = pf_soup.new_tag('phone')
+			cellphone_tag.append(CData(agent.cellphone.text))
+			agent_tag.append(cellphone_tag)
+
+		property_tag.append(agent_tag)
+
+	#parking
+	# parking = soup.find('parking')
+	# if parking:
+	# 	try:
+	# 		parking_contents = parking.contents
+	# 		for content in parking_contents:
+	# 			if content.text == 'Yes':
+	# 				parking_tag = pf_soup.new_tag('parking')
+	# 				parking_tag.append(CData(************))
+
+	#furnished
+	features = soup.find_all('feature')
+	if features:
+		for feature in features:
+			if feature.text == 'Furnished':
+				funished_tag = pf_soup.new_tag('furnished')
+				funished_tag.append(CData('Y'))
+				property_tag.append(funished_tag)
+	
+	#photos
+	images = soup.find_all('picture')
+	if images:
+		image_urls = build_images(images, refno=MLSNumber.text)
+		if image_urls:
+			photo_tag = pf_soup.new_tag('photo')
+			for url in image_urls:
+				url_tag = pf_soup.new_tag('url')
+				url_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+				url_tag.append(CData(url))
+				photo_tag.append(url_tag)
+
+			property_tag.append(photo_tag)
+
+	property_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+	return (pf_soup, operation) 
+
+
+
+
