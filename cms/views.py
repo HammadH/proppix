@@ -425,9 +425,10 @@ class IssmoPropertyFinderLive(View):
 		return HttpResponse(open(settings.PF_HOURLY_XML), content_type="text/xml; charset=utf-8")
 
 	def post(self, request, *args, **kwargs):
-		
+		print 'got post'
 		soup = BeautifulSoup(str(request.POST))
 		pf_soup = convert_to_pf(soup)
+		print pf_soup
 		if pf_soup is not None:
 			pf_soup, operation = pf_soup[0], pf_soup[1]
 			feed_file = open(settings.PF_HOURLY_XML, 'rb+', bufsize)
@@ -646,9 +647,11 @@ def convert_to_pf(soup):
 				funished_tag.append(CData('Y'))
 				property_tag.append(funished_tag)
 	
+	print 'getting images'
 	#photos
 	images = soup.find_all('picture')
 	if images:
+		print 'going in build_images'
 		image_urls = build_images(images, refno=MLSNumber.text)
 		if image_urls:
 			photo_tag = pf_soup.new_tag('photo')
