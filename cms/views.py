@@ -27,7 +27,7 @@ class IssmoDubizzleLive(View):
 		return HttpResponse(open(settings.DBZ_HOURLY_XML).read(), content_type="text/xml; charset=utf-8")
 
 	def post(self, request, *args, **kwargs):
-		print 'got post'
+		print 'dbz got post'
 		soup = BeautifulSoup(request.POST.get('<?xml version', None))
 		if soup is None:
 			print "soup returned none"
@@ -394,8 +394,10 @@ def build_images(images, refno):
 					content_type = image.contenttype.text
 					encoded_data = image.binarydata.string.replace(' ','+')
 					decoded_data = encoded_data.decode('base64')
+					print 'decoded'
 					imgfile = StringIO(decoded_data)
 					img = Image.open(imgfile)
+					print 'image opened'
 					imgId = image.pictureid.text.strip('{,}')
 					imgCaption = image.picturecaption.text
 					img_paths = build_image_path(refno, imgId, imgCaption)
@@ -409,6 +411,7 @@ def build_images(images, refno):
 					image_xml_url = settings.DOMAIN_NAME + img_paths['media_path'] + '.' + content_type.lower()
 					image_urls.append(image_xml_url)
 				except Exception,e:
+						print e
 						continue
 		return image_urls
 
@@ -417,7 +420,7 @@ def build_images(images, refno):
 
 class IssmoPropertyFinderFull(View):
 	def get(self, request, *args, **kwargs):
-		pass
+		return HttpResponse(open(settings.PF_FULL_XML), content_type="text/xml; charset=utf-8")
 
 
 class IssmoPropertyFinderLive(View):
@@ -425,10 +428,10 @@ class IssmoPropertyFinderLive(View):
 		return HttpResponse(open(settings.PF_HOURLY_XML), content_type="text/xml; charset=utf-8")
 
 	def post(self, request, *args, **kwargs):
-		print 'got post'
-		soup = BeautifulSoup(str(request.POST))
+		print 'pf got post'
+		soup = BeautifulSoup(request.POST.get('<?xml version', None))
 		pf_soup = convert_to_pf(soup)
-		print pf_soup
+		
 		if pf_soup is not None:
 			pf_soup, operation = pf_soup[0], pf_soup[1]
 			feed_file = open(settings.PF_HOURLY_XML, 'rb+', bufsize)
@@ -478,6 +481,8 @@ def convert_to_pf(soup):
 			operation = "REMOVE"
 			return (soup, operation)
 
+	print 'status checked'
+
 	# reference 
 	reference = soup.find('mlsnumber')
 	if reference:
@@ -493,6 +498,8 @@ def convert_to_pf(soup):
 		# 	_to = DALY
 		# send_mail(message, str(pf_soup), _to)
 		return None
+
+	print 'ref checked'
 
 	#offering type
 	codes = reference.text.split('-')
@@ -525,6 +532,8 @@ def convert_to_pf(soup):
 		property_type_tag.append(CData(property_type))
 		property_tag.append(property_type_tag)
 
+	print 'codes checked'
+
 	# price
 	price = soup.find('listprice')
 	if price:
@@ -533,14 +542,16 @@ def convert_to_pf(soup):
 		property_tag.append(price_tag)
 	else:
 		return None
-
+	print 'price check'
+		
 	#city
 	city = soup.find('city')
 	if city:
 		city_tag = pf_soup.new_tag('city')
 		city_tag.append(CData(city.text))
 		property_tag.append(city_tag)
-
+    
+    print 'city'
 
 	# community
 	community = soup.find('listingarea')
@@ -548,6 +559,8 @@ def convert_to_pf(soup):
 		community_tag = pf_soup.new_tag('community')
 		community_tag.append(CData(community.text))
 		property_tag.append(community_tag)
+
+	print 'community'
 
 	# building
 	building = soup.find('buildingfloor')
@@ -572,6 +585,7 @@ def convert_to_pf(soup):
 		description_tag.append(CData(description.text))
 		property_tag.append(description_tag)
 
+	print 'description checked'
 	# amenities
 	# read from features
 
@@ -591,6 +605,8 @@ def convert_to_pf(soup):
 		bedrooms_tag = pf_soup.new_tag('bedroom')
 		bedrooms_tag.append(bedrooms.text)
 		property_tag.append(bedrooms_tag)
+
+	print 'bedrooms checked'
 
 	# bathrooms
 	bathrooms = soup.find('bathtotal')
