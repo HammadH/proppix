@@ -294,7 +294,7 @@ def convert_to_dbz(soup):
 				bedrooms_tag.append(bedrooms.text)
 			else:
 				bedrooms_tag.append('0')
-				property_tag.append(bedrooms_tag)
+			property_tag.append(bedrooms_tag)
 
 		## bathrooms ##
 		bathrooms = soup.find('bathtotal')
