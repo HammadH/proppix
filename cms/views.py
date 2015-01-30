@@ -550,8 +550,8 @@ def convert_to_pf(soup):
 		city_tag = pf_soup.new_tag('city')
 		city_tag.append(CData(city.text))
 		property_tag.append(city_tag)
-    
-    print 'city'
+
+	print 'city'
 
 	# community
 	community = soup.find('listingarea')
@@ -668,7 +668,7 @@ def convert_to_pf(soup):
 	images = soup.find_all('picture')
 	if images:
 		print 'going in build_images'
-		image_urls = build_images(images, refno=MLSNumber.text)
+		image_urls = build_images(images, refno=reference_number)
 		if image_urls:
 			photo_tag = pf_soup.new_tag('photo')
 			for url in image_urls:
