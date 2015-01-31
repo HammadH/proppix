@@ -603,7 +603,10 @@ def convert_to_pf(soup):
 	bedrooms = soup.find('bedrooms')
 	if bedrooms:
 		bedrooms_tag = pf_soup.new_tag('bedroom')
-		bedrooms_tag.append(bedrooms.text)
+		if bedrooms.text == '0':
+			bedrooms_tag.append(CData('studio'))
+		else:
+			bedrooms_tag.append(CData(bedrooms.text))
 		property_tag.append(bedrooms_tag)
 
 	print 'bedrooms checked'
@@ -612,7 +615,7 @@ def convert_to_pf(soup):
 	bathrooms = soup.find('bathtotal')
 	if bathrooms:
 		bathrooms_tag = pf_soup.new_tag('bathroom')
-		bathrooms_tag.append(bathrooms.text)
+		bathrooms_tag.append(CData(bathrooms.text))
 		property_tag.append(bathrooms_tag)
 
 	# agent
