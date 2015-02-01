@@ -688,3 +688,268 @@ def convert_to_pf(soup):
 
 
 
+class IssmoPropertyFinderLive_V2(View):
+	def get(self, request, *args, **kwargs):
+		return HttpResponse(open(settings.PF_HOURLY_XML_V2), content_type="text/xml; charset=utf-8")
+
+	def post(self, request, *args, **kwargs):
+		print 'pf got post'
+		soup = BeautifulSoup(request.POST.get('<?xml version', None))
+		pf_soup = convert_to_pf_v2(soup)
+		
+		if pf_soup is not None:
+			pf_soup, operation = pf_soup[0], pf_soup[1]
+			feed_file = open(settings.PF_HOURLY_XML_V2, 'rb+', bufsize)
+			feed_file_soup = BeautifulSoup(feed_file)
+			try:
+				feed_file_soup.array.unwrap()
+			except AttributeError:
+				pass
+			
+			output_feed_file = open(settings.PF_HOURLY_XML_V2, 'wb+', bufsize)
+			full_dump_file = open(settings.PF_FULL_XML_V2, 'wb+', bufsize)
+
+			pf_feed = pf_soup.new_tag('array')
+			pf_feed.append(feed_file_soup)
+
+			if operation == "APPEND/REPLACE":				
+				reference_number = pf_soup.find('reference').text
+			elif operation == "REMOVE":
+				reference_number = pf_soup.find('mlsnumber').text
+			existing_listing = feed_file_soup.find('reference', text=reference_number)
+			if operation == "APPEND/REPLACE" and existing_listing:
+				existing_listing.parent.decompose()
+				feed_file_soup.append(pf_soup)
+			elif operation == "REMOVE" and existing_listing:
+				existing_listing.parent.decompose()
+			elif operation == "APPEND/REPLACE" and not existing_listing:
+				feed_file_soup.append(pf_soup)
+			
+			output_feed_file.write(str(pf_feed))
+			full_dump_file.write(str(pf_feed))
+			return HttpResponse(status=201)
+		else:
+			return Http404('pf soup returned None')
+
+def convert_to_pf_v2(soup):
+	pf_soup = BeautifulSoup("<listing></listing>")
+	property_tag = pf_soup.listing
+	
+	operation = "APPEND/REPLACE"
+
+	#status
+	status = soup.find('listingstatus')
+	if status:
+		if status.text != "Active":
+			operation = "REMOVE"
+			return (soup, operation)
+
+	print 'status checked'
+
+	# reference 
+	reference = soup.find('mlsnumber')
+	if reference:
+		reference_number = reference.text
+		reference_number_tag = pf_soup.new_tag('reference')
+		reference_number_tag.append(reference_number)
+		property_tag.append(reference_number_tag)
+	else:
+		# message = "Missing reference no!"
+		# if  pf_soup.find('email') is not None:
+		# 	_to = pf_soup.find('email').text
+		# else:
+		# 	_to = DALY
+		# send_mail(message, str(pf_soup), _to)
+		return None
+
+	print 'ref checked'
+
+	#offering type
+	codes = reference.text.split('-')
+	if codes[0] in TYPE_RENT:
+		if codes[1] in APARTMENT or codes[1] in VILLA:
+			offering_type = 'Residential for Rent'
+		elif codes[1] in SUBTYPE_COMMERCIAL:
+			offering_type = 'Commercial for Rent'
+	elif codes[0] in TYPE_SALE:
+		if codes[1] in APARTMENT or codes[1] in VILLA:
+			offering_type = 'Residential for Sale'
+		elif codes[1] in SUBTYPE_COMMERCIAL:
+			offering_type = 'Commercial for Sale'
+	if offering_type:
+		offering_type_tag = pf_soup.new_tag('category')
+		offering_type_tag.append(offering_type)
+		property_tag.append(offering_type_tag)
+	else:
+		return None
+
+
+#COMMERCIAL_CODES = ['RE', 'OF', 'IN', 'ST', 're', 'of', 'in', 'st']
+	# property_type
+	if codes[1]:
+		if codes[1] in APARTMENT:
+			property_type = 'Apartment'
+		elif codes[1] in VILLA:
+			property_type = 'Villa'
+		elif codes[1] in SUBTYPE_COMMERCIAL:
+			if codes[2] and codes[2] in COMMERCIAL_CODES:
+				if codes[2] == 'RE':
+					property_type = 'Retail'
+				elif codes[2] == 'OF':
+					property_tag == 'Office Space'
+				elif codes[2] == 'IN':
+					property_tag = 'Warehouse'
+				elif codes[2] == 'ST':
+					property_tag = 'Staff Accommodation'
+
+		property_type_tag = pf_soup.new_tag('type')
+		property_type_tag.append(property_type)
+		property_tag.append(property_type_tag)
+
+	print 'codes checked'
+
+	# price
+	price = soup.find('listprice')
+	if price:
+		price_tag = pf_soup.new_tag('price')
+		price_tag.append(price.text)
+		property_tag.append(price_tag)
+	else:
+		return None
+	print 'price check'
+		
+	#city
+	city = soup.find('city')
+	if city:
+		city_tag = pf_soup.new_tag('city')
+		city_tag.append(city.text)
+		property_tag.append(city_tag)
+
+	print 'city'
+
+	# community
+	community = soup.find('listingarea')
+	if community:
+		community_tag = pf_soup.new_tag('community')
+		community_tag.append(community.text)
+		property_tag.append(community_tag)
+
+	print 'community'
+
+	# building
+	building = soup.find('buildingfloor')
+	if building:
+		property_name_tag = pf_soup.new_tag('property')
+		property_name_tag.append(building.text)
+		property_tag.append(property_name_tag)
+
+	# title
+	title = soup.find('streetname')
+	if title:
+		title_tag = pf_soup.new_tag('title_en')
+		title_tag.append(CData(title.text))
+		property_tag.append(title_tag)
+	else:
+		return None
+
+	# description
+	description = soup.find('publicremark')
+	if description:
+		description_tag = pf_soup.new_tag('description_en')
+		description_tag.append(CData(description.text))
+		property_tag.append(description_tag)
+
+	print 'description checked'
+	# amenities
+	# read from features
+
+	# views
+	# read from features
+
+	# size
+	size = soup.find('squarefeet')
+	if size:
+		size_tag = pf_soup.new_tag('sqft')
+		size_tag.append(size.text)
+		property_tag.append(size_tag)
+
+	# bedroom
+	bedrooms = soup.find('bedrooms')
+	if bedrooms:
+		bedrooms_tag = pf_soup.new_tag('bedroom')
+		if bedrooms.text == '0':
+			bedrooms_tag.append('studio')
+		else:
+			bedrooms_tag.append(bedrooms.text)
+		property_tag.append(bedrooms_tag)
+
+	print 'bedrooms checked'
+
+	# bathrooms
+	bathrooms = soup.find('bathtotal')
+	if bathrooms:
+		bathrooms_tag = pf_soup.new_tag('bathroom')
+		bathrooms_tag.append(CData(bathrooms.text))
+		property_tag.append(bathrooms_tag)
+
+	# agent
+	agent = soup.find('reagent')
+	if agent:
+		
+		#name
+		if agent.firstname:
+			firstname = agent.firstname.text
+		if agent.lastname:
+			lastname = agent.lastname.text
+		agent_name = firstname + ' ' + lastname
+		agent_name_tag = pf_soup.new_tag('agent_name')
+		agent_name_tag.append(CData(agent_name))
+		property_tag.append(agent_name_tag)
+
+		#email
+		if agent.email:
+			email_tag = pf_soup.new_tag('agent_email')
+			email_tag.append(CData(agent.email.text))
+			property_tag.append(email_tag)
+
+		#phone
+		if agent.cellphone:
+			cellphone_tag = pf_soup.new_tag('agent_phone')
+			cellphone_tag.append(CData(agent.cellphone.text))
+			property_tag.append(cellphone_tag)
+
+		
+
+	#parking
+	# parking = soup.find('parking')
+	# if parking:
+	# 	try:
+	# 		parking_contents = parking.contents
+	# 		for content in parking_contents:
+	# 			if content.text == 'Yes':
+	# 				parking_tag = pf_soup.new_tag('parking')
+	# 				parking_tag.append(CData(************))
+
+	#furnished
+	features = soup.find_all('feature')
+	if features:
+		for feature in features:
+			if feature.text == 'Furnished':
+				funished_tag = pf_soup.new_tag('furnished')
+				funished_tag.append(CData('Y'))
+				property_tag.append(funished_tag)
+	
+	print 'getting images'
+	#photos
+	images = soup.find_all('picture')
+	if images:
+		print 'going in build_images'
+		image_urls = build_images(images, refno=reference_number)
+		if image_urls:
+			for index, url in enumerate(image_urls):
+				photo_tag = pf_soup.new_tag('photo_url_%s') %(index+1)
+				photo_tag.append(CData(url))
+				property_tag.append(photo_tag)
+
+	
+	return (pf_soup, operation)

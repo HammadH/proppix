@@ -94,6 +94,11 @@ DBZ_FULL_XML = XML_ROOT + 'dbz_full.xml'
 PF_HOURLY_XML = XML_ROOT + 'pf_hourly.xml'
 PF_FULL_XML = XML_ROOT + 'pf_full.xml'
 
+
+PF_HOURLY_XML_V2 = XML_ROOT + 'pf_hourly_v2.xml'
+PF_FULL_XML_V2 = XML_ROOT + 'pf_full_v2.xml'
+
+
 DOMAIN_NAME = 'http://www.prop-pix.com/'
 
 
