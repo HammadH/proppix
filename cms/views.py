@@ -290,9 +290,9 @@ def convert_to_dbz(soup):
 		bedrooms = soup.find('bedrooms')
 		if subtype_tag.text in VILLA or subtype_tag.text in APARTMENT:
 			bedrooms_tag = dbz_soup.new_tag('bedrooms')
-			if bedrooms.text:
+			if bedrooms.text and bedrooms.text != '100':
 				bedrooms_tag.append(bedrooms.text)
-			else:
+			elif bedrooms.text and bedrooms.text == '100':
 				bedrooms_tag.append('0')
 			property_tag.append(bedrooms_tag)
 
@@ -603,7 +603,7 @@ def convert_to_pf(soup):
 	bedrooms = soup.find('bedrooms')
 	if bedrooms:
 		bedrooms_tag = pf_soup.new_tag('bedroom')
-		if bedrooms.text == '0':
+		if bedrooms.text == '100':
 			bedrooms_tag.append(CData('studio'))
 		else:
 			bedrooms_tag.append(CData(bedrooms.text))
@@ -877,7 +877,7 @@ def convert_to_pf_v2(soup):
 	bedrooms = soup.find('bedrooms')
 	if bedrooms:
 		bedrooms_tag = pf_soup.new_tag('bedroom')
-		if bedrooms.text == '0':
+		if bedrooms.text == '100':
 			bedrooms_tag.append('studio')
 		else:
 			bedrooms_tag.append(bedrooms.text)
