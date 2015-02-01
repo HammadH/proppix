@@ -371,7 +371,6 @@ def build_image_path(refno, imgId=None, imgCaption=None):
 						os.makedirs(settings.MEDIA_ROOT+folder_path)
 				except Exception, e:
 						print e
-						pass
 				paths = {
 				'full_img_path' : settings.MEDIA_ROOT + folder_path + imgId,
 				'media_path' : "media" + folder_path + imgId
@@ -402,8 +401,9 @@ def build_images(images, refno):
 					imgCaption = image.picturecaption.text
 					img_paths = build_image_path(refno, imgId, imgCaption)
 					full_img_path = img_paths['full_img_path'] + '.' + content_type.lower()
+
 					try:
-						image_exists = file(full_img_path, 'r')
+						image_exists = open(full_img_path, 'r')
 					except IOError:
 						print 'saving image %s' %full_img_path
 						img.save(full_img_path)
@@ -693,7 +693,7 @@ class IssmoPropertyFinderLive_V2(View):
 		return HttpResponse(open(settings.PF_HOURLY_XML_V2), content_type="text/xml; charset=utf-8")
 
 	def post(self, request, *args, **kwargs):
-		print 'pf got post'
+		print 'pf_v2 got post'
 		soup = BeautifulSoup(request.POST.get('<?xml version', None))
 		pf_soup = convert_to_pf_v2(soup)
 		
@@ -947,7 +947,7 @@ def convert_to_pf_v2(soup):
 		image_urls = build_images(images, refno=reference_number)
 		if image_urls:
 			for index, url in enumerate(image_urls):
-				photo_tag = pf_soup.new_tag('photo_url_%s') %(index+1)
+				photo_tag = pf_soup.new_tag('photo_url_%s' %(index+1))
 				photo_tag.append(CData(url))
 				property_tag.append(photo_tag)
 
