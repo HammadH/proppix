@@ -290,9 +290,9 @@ def convert_to_dbz(soup):
 		bedrooms = soup.find('bedrooms')
 		if subtype_tag.text in VILLA or subtype_tag.text in APARTMENT:
 			bedrooms_tag = dbz_soup.new_tag('bedrooms')
-			if bedrooms.text and bedrooms.text not '100':
+			if bedrooms.text and bedrooms.text != '100':
 				bedrooms_tag.append(bedrooms.text)
-			elif bedrooms.text and bedrooms.text is '100':
+			elif bedrooms.text and bedrooms.text == '100':
 				bedrooms_tag.append('0')
 			property_tag.append(bedrooms_tag)
 
