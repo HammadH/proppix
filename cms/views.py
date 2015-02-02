@@ -555,19 +555,22 @@ def convert_to_pf(soup):
 
 	# community
 	community = soup.find('listingarea')
-	if community:
+	if community.text:
 		community_tag = pf_soup.new_tag('community')
+		subcommunity_tag = pf_soup.new_tag('subcommunity')
 		community_tag.append(CData(community.text))
+		subcommunity_tag.append(CData(community.text))
 		property_tag.append(community_tag)
+		property_tag.append(subcommunity_tag)
 
 	print 'community'
 
 	# building
 	building = soup.find('buildingfloor')
-	if building:
-		property_name_tag = pf_soup.new_tag('property_name')
+	property_name_tag = pf_soup.new_tag('property_name')
+	if building.text:
 		property_name_tag.append(CData(building.text))
-		property_tag.append(building)
+	property_tag.append(property_name_tag)
 
 	# title
 	title = soup.find('streetname')
@@ -829,19 +832,22 @@ def convert_to_pf_v2(soup):
 
 	# community
 	community = soup.find('listingarea')
-	if community:
+	if community.text:
 		community_tag = pf_soup.new_tag('community')
+		subcommunity_tag = pf_soup.new_tag('subcommunity')
 		community_tag.append(community.text)
+		subcommunity_tag.append(community.text)
 		property_tag.append(community_tag)
+		property_tag.append(subcommunity_tag)
 
 	print 'community'
 
 	# building
 	building = soup.find('buildingfloor')
-	if building:
-		property_name_tag = pf_soup.new_tag('property')
+	property_name_tag = pf_soup.new_tag('property')
+	if building.text:
 		property_name_tag.append(building.text)
-		property_tag.append(property_name_tag)
+	property_tag.append(property_name_tag)
 
 	# title
 	title = soup.find('streetname')
