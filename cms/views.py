@@ -73,10 +73,11 @@ class IssmoDubizzleLive(View):
 					feed_file.write(str(dbz_feed))
 					full_dump_file.write(str(dbz_feed))
 
+				send_mail('%s: Successful' %ref_no, '', PROPPIX, [dbz_soup.find('contactemail').text, PROPPIX])
 				return HttpResponse(status=201)
 						#return HttpResponse(dbz_soup, content_type="application/xhtml+xml")
 			else:
-				return Http404('dbz soup returned None')
+				return HttpResponse(status=404)
 
 CITY_CODES = {
   'dubai':2,
@@ -129,8 +130,10 @@ DBZ_AMENITIES = {'balcony': 'BA',
 
 def convert_to_dbz(soup):
 		#find agent email to notifiy for errors
-		agent_email = soup.find('email')
-
+		try:
+			agent_email = soup.find('email').text
+		except:
+			agent_email = DALY	
 		#soup is Beautifulsoup
 		MLSNumber = soup.find('mlsnumber')
 
@@ -147,6 +150,8 @@ def convert_to_dbz(soup):
 						type_tag = dbz_soup.new_tag('type')
 						type_tag.append('RP')
 				elif codes[0] in TYPE_SALE:
+						print "Skipping sale listing from dbz"
+						return None
 						type_tag = dbz_soup.new_tag('type')
 						type_tag.append('SP')
 				else:
@@ -199,12 +204,12 @@ def convert_to_dbz(soup):
 
 		## status tag ##
 		status = soup.find('listingstatus')
-		if status.text:
+		if status:
 			status_tag = dbz_soup.new_tag('status')
-			if status == 'Active':
-					status_tag.append('vacant')
+			if status.text == 'Active':
+				status_tag.append('vacant')
 			else:
-					status_tag.append('deleted')
+				status_tag.append('deleted')
 			property_tag.append(status_tag)
 		else:
 			print "status is none"
@@ -227,7 +232,7 @@ def convert_to_dbz(soup):
 		## CDATA description tag
 		description_tag = dbz_soup.new_tag('description')
 		description = soup.find('publicremark')
-		if description.text:
+		if description:
 				description = CData(description.text)
 				description_tag.append(description)
 				property_tag.append(description_tag)
@@ -240,7 +245,7 @@ def convert_to_dbz(soup):
 		## city tag ##
 		city_tag = dbz_soup.new_tag('city')
 		city = soup.find('city')
-		if city.text:
+		if city:
 			if city.text.lower() in CITY_CODES.keys():
 				city_code = CITY_CODES[city.text.lower()]
 				city_tag.append(str(city_code))
@@ -259,7 +264,7 @@ def convert_to_dbz(soup):
 		## size ##
 		size_tag = dbz_soup.new_tag('size')
 		size = soup.find('squarefeet')
-		if size.text:
+		if size:
 			size_tag.append(size.text)
 			property_tag.append(size_tag)
 		else: 
@@ -271,7 +276,7 @@ def convert_to_dbz(soup):
 		## price ##
 		price_tag = dbz_soup.new_tag('price')
 		price = soup.find('listprice')
-		if price.text:
+		if price:
 				price_tag.append(price.text)
 				property_tag.append(price_tag)
 		else:
@@ -300,7 +305,7 @@ def convert_to_dbz(soup):
 
 		## contactemail ##
 		email = soup.find('email')
-		if email.text:
+		if email:
 				email_tag = dbz_soup.new_tag('contactemail')
 				email_tag.append(email.text)
 				property_tag.append(email_tag)
@@ -308,7 +313,7 @@ def convert_to_dbz(soup):
 		## contactnumber ##
 		contactnumber_tag = dbz_soup.new_tag('contactnumber')
 		cellphone = soup.find('cellphone')
-		if cellphone.text:
+		if cellphone:
 				contactnumber_tag.append(cellphone.text)
 				property_tag.append(contactnumber_tag)
 
@@ -335,7 +340,7 @@ def convert_to_dbz(soup):
 		## bedrooms ##                        
 		if subtype_tag.text in VILLA or subtype_tag.text in APARTMENT:
 			bedrooms = soup.find('bedrooms')
-			if bedrooms.text:
+			if bedrooms:
 				bedrooms_tag = dbz_soup.new_tag('bedrooms')
 				if bedrooms.text != '100':
 					bedrooms_tag.append(bedrooms.text)
@@ -350,7 +355,7 @@ def convert_to_dbz(soup):
 
 		## bathrooms ##
 		bathrooms = soup.find('bathtotal')
-		if bathrooms.text:
+		if bathrooms:
 			bathrooms_tag = dbz_soup.new_tag('bathrooms')
 			bathrooms_tag.append(bathrooms.text)
 			property_tag.append(bathrooms_tag)
@@ -368,7 +373,7 @@ def convert_to_dbz(soup):
 			pass
 
 		ac = soup.find('cooling')
-		if ac.text:
+		if ac:
 			amenities.append('AC')
 
 		features = soup.find_all('feature')
@@ -781,11 +786,20 @@ class IssmoPropertyFinderLive_V2(View):
 			
 			output_feed_file.write(str(pf_feed))
 			full_dump_file.write(str(pf_feed))
+			send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
+				'successful on PropertyFinder' %reference_number,
+				 PROPPIX, [pf_soup.find('agent_email').text, PROPPIX])
 			return HttpResponse(status=201)
 		else:
-			return Http404('pf soup returned None')
+			return HttpResponse(status=404)
 
 def convert_to_pf_v2(soup):
+	#get agent email to send notification
+	try:
+		agent_email = soup.find('email').text
+	except:
+		agent_email = DALY
+
 	pf_soup = BeautifulSoup("<listing></listing>")
 	property_tag = pf_soup.listing
 	
@@ -808,15 +822,12 @@ def convert_to_pf_v2(soup):
 		reference_number_tag.append(reference_number)
 		property_tag.append(reference_number_tag)
 	else:
-		# message = "Missing reference no!"
-		# if  pf_soup.find('email') is not None:
-		# 	_to = pf_soup.find('email').text
-		# else:
-		# 	_to = DALY
-		# send_mail(message, str(pf_soup), _to)
+		print 'missing reference'
+		send_mail('Listing failed to publish', 'Please enter a reference number', 
+			PROPPIX, [agent_email, PROPPIX])
 		return None
 
-	print 'ref checked'
+	print '%s ref checked' %reference_number
 
 	#offering type
 	codes = reference.text.split('-')
@@ -835,6 +846,9 @@ def convert_to_pf_v2(soup):
 		offering_type_tag.append(offering_type)
 		property_tag.append(offering_type_tag)
 	else:
+		print "%s: error in codes" %reference_number
+		send_mail('%s: Failed to publish' %reference_number, 'Error in reference number. Please recheck and enter'
+			'the correct codes', PROPPIX, [agent_email, PROPPIX])
 		return None
 
 
@@ -869,17 +883,29 @@ def convert_to_pf_v2(soup):
 		price_tag.append(price.text)
 		property_tag.append(price_tag)
 	else:
+		print "%s: price" %reference_number
+		send_mail('%s: failed to publish' %reference_number, 'Error in price', PROPPIX,
+			[agent_email, PROPPIX])
 		return None
-	print 'price check'
+	print '%s price check' %reference_number
 		
 	#city
+	import pdb;pdb.set_trace()
 	city = soup.find('city')
 	if city:
-		city_tag = pf_soup.new_tag('city')
-		city_tag.append(city.text)
-		property_tag.append(city_tag)
-
-	print 'city'
+		if city.text.lower() in CITY_CODES.keys():
+			city_tag = pf_soup.new_tag('city')
+			city_tag.append(city.text)
+			property_tag.append(city_tag)
+		else:
+			print "%s incorrect city name" %reference_number
+			send_mail('%s Incorrect city name', 'Please enter the correct name of city',
+				PROPPIX, [agent_email, PROPPIX])
+	else:
+		print "%s city" %reference_number
+		send_mail('%s: No city provided' %reference_number, 'Please enter the name of city',
+			PROPPIX, [agent_email, PROPPIX])
+	print '%s city' %reference_number
 
 	# community
 	community = soup.find('listingarea')
@@ -891,13 +917,18 @@ def convert_to_pf_v2(soup):
 		property_tag.append(community_tag)
 		property_tag.append(subcommunity_tag)
 
-	print 'community'
+	print 'community checked'
 
 	# building
 	building = soup.find('buildingfloor')
 	property_name_tag = pf_soup.new_tag('property')
-	if building.text:
+	if building:
 		property_name_tag.append(building.text)
+	else:
+		print "%s no building" %reference_number
+		send_mail('%s no building provided' %reference_number, 'No building info was'
+			'found for this listing. If you wish to provide a building name, please'
+			'enter it in Street Address -> BuildingFloor', PROPPIX, [agent_email, PROPPIX])
 	property_tag.append(property_name_tag)
 
 	# title
@@ -907,6 +938,9 @@ def convert_to_pf_v2(soup):
 		title_tag.append(CData(title.text))
 		property_tag.append(title_tag)
 	else:
+		print "%s no title" %reference_number
+		send_mail('%s Failed to publish. No title provided' %reference_number, 'Please provide a title for this'
+			'listing in Street Address -> Street Name', PROPPIX, [agent_email, PROPPIX])
 		return None
 
 	# description
@@ -915,6 +949,10 @@ def convert_to_pf_v2(soup):
 		description_tag = pf_soup.new_tag('description_en')
 		description_tag.append(CData(description.text))
 		property_tag.append(description_tag)
+	else:
+		print "%s no description" %reference_number
+		send_mail('%s has no description', 'If you wish to provide description, please fill it up in'
+			'Public Remark', PROPPIX, [agent_email, PROPPIX])
 
 	print 'description checked'
 	# amenities
@@ -929,6 +967,10 @@ def convert_to_pf_v2(soup):
 		size_tag = pf_soup.new_tag('sqft')
 		size_tag.append(size.text)
 		property_tag.append(size_tag)
+	else:
+		print "%s: no size" %reference_number
+		send_mail('%s: no size provided' %reference_number, 'Please enter a value in SquareFeet', PROPPIX,
+			[agent_email, PROPPIX])
 
 	# bedroom
 	bedrooms = soup.find('bedrooms')
@@ -939,8 +981,12 @@ def convert_to_pf_v2(soup):
 		else:
 			bedrooms_tag.append(bedrooms.text)
 		property_tag.append(bedrooms_tag)
+	else:
+		print '%s no bedrooms' %reference_number
+		send_mail('%s: no bedrooms' %reference_number, 'Please check bedrooms again. 100 is for studio, other'
+			'values represent the no.of bedrooms', PROPPIX, [agent_email, PROPPIX])
 
-	print 'bedrooms checked'
+	print '%s bedrooms checked' %reference_number
 
 	# bathrooms
 	bathrooms = soup.find('bathtotal')
@@ -948,6 +994,10 @@ def convert_to_pf_v2(soup):
 		bathrooms_tag = pf_soup.new_tag('bathroom')
 		bathrooms_tag.append(CData(bathrooms.text))
 		property_tag.append(bathrooms_tag)
+	else:
+		print "%s no bathrooms" %reference_number
+		send_mail('%s has no bathrooms' %reference_number, 'No bathrooms were found for this listing.'
+			'If you wish to provide bathrooms, please fill it up in bathrooms.', PROPPIX, [agent_email, PROPPIX])
 
 	# agent
 	agent = soup.find('reagent')

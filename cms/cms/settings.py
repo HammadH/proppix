@@ -103,3 +103,6 @@ DOMAIN_NAME = 'http://www.prop-pix.com/'
 
 
 MEDIA_URL = 'media/'
+
+## Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
