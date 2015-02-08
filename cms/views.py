@@ -139,6 +139,8 @@ def convert_to_dbz(soup):
 						type_tag = dbz_soup.new_tag('type')
 						type_tag.append('RP')
 				elif codes[0] in TYPE_SALE:
+						print 'skipping sales on dbz'
+						return None
 						type_tag = dbz_soup.new_tag('type')
 						type_tag.append('SP')
 				else:
