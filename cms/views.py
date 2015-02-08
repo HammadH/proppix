@@ -755,9 +755,15 @@ class IssmoPropertyFinderLive_V2(View):
 		print 'pf_v2 got post'
 		soup = BeautifulSoup(request.POST.get('<?xml version', None))
 		pf_soup = convert_to_pf_v2(soup)
-		
-		if pf_soup is not None:
-			pf_soup, operation = pf_soup[0], pf_soup[1]
+
+		# get agent email to send notifications
+		try:
+			agent_email = pf_soup.find('email').text
+		except:
+			agent_email = DALY
+
+		if pf_soup[0] is not None:
+			pf_soup, operation, errors = pf_soup[0], pf_soup[1], pf_soup[2]
 			feed_file = open(settings.PF_HOURLY_XML_V2, 'rb+', bufsize)
 			feed_file_soup = BeautifulSoup(feed_file)
 			try:
@@ -786,19 +792,27 @@ class IssmoPropertyFinderLive_V2(View):
 			
 			output_feed_file.write(str(pf_feed))
 			full_dump_file.write(str(pf_feed))
-			send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
+			if not errors:
+				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
 				'successful on PropertyFinder' %reference_number,
 				 PROPPIX, [pf_soup.find('agent_email').text, PROPPIX])
+			else:
+				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
+				'published with on PropertyFinder but has errors: \n %s' %(reference_number,[error for error in errors]),
+				 PROPPIX, [pf_soup.find('agent_email').text, PROPPIX])
+
 			return HttpResponse(status=201)
 		else:
+			if soup.find('mlsnumber'):
+				reference_number = soup.find('mlsnumber').text
+			else: reference_number = None
+			send_mail('%s Listing failed to publish' %reference_number, "%s" %[error for error in pf_soup[1]], 
+			PROPPIX, [agent_email, PROPPIX])
 			return HttpResponse(status=404)
 
 def convert_to_pf_v2(soup):
-	#get agent email to send notification
-	try:
-		agent_email = soup.find('email').text
-	except:
-		agent_email = DALY
+	# messages to notify to agent
+	errors = []
 
 	pf_soup = BeautifulSoup("<listing></listing>")
 	property_tag = pf_soup.listing
@@ -822,10 +836,10 @@ def convert_to_pf_v2(soup):
 		reference_number_tag.append(reference_number)
 		property_tag.append(reference_number_tag)
 	else:
-		print 'missing reference'
-		send_mail('Listing failed to publish', 'Please enter a reference number', 
-			PROPPIX, [agent_email, PROPPIX])
-		return None
+		err =  'missing reference number'
+		errors.append(err)
+		print err
+		return (None, errors)
 
 	print '%s ref checked' %reference_number
 
@@ -841,15 +855,15 @@ def convert_to_pf_v2(soup):
 			offering_type = 'Residential for Sale'
 		elif codes[1] in SUBTYPE_COMMERCIAL:
 			offering_type = 'Commercial for Sale'
-	if offering_type:
+	try:
 		offering_type_tag = pf_soup.new_tag('category')
 		offering_type_tag.append(offering_type)
 		property_tag.append(offering_type_tag)
-	else:
-		print "%s: error in codes" %reference_number
-		send_mail('%s: Failed to publish' %reference_number, 'Error in reference number. Please recheck and enter'
-			'the correct codes', PROPPIX, [agent_email, PROPPIX])
-		return None
+	except:
+		err = "%s: error in codes" %reference_number
+		errors.append(err)
+		print err
+		return (None, errors)
 
 
 #COMMERCIAL_CODES = ['RE', 'OF', 'IN', 'ST', 're', 'of', 'in', 'st']
@@ -873,7 +887,10 @@ def convert_to_pf_v2(soup):
 		property_type_tag = pf_soup.new_tag('type')
 		property_type_tag.append(property_type)
 		property_tag.append(property_type_tag)
-
+	else:
+		err = "%s: incorrect codes" %reference_number
+		errors.append(err)
+		print err
 	print 'codes checked'
 
 	# price
@@ -883,14 +900,13 @@ def convert_to_pf_v2(soup):
 		price_tag.append(price.text)
 		property_tag.append(price_tag)
 	else:
-		print "%s: price" %reference_number
-		send_mail('%s: failed to publish' %reference_number, 'Error in price', PROPPIX,
-			[agent_email, PROPPIX])
-		return None
+		err = "error in price"
+		errors.append(err)
+		print err
+		return (None, errors)
 	print '%s price check' %reference_number
 		
 	#city
-	import pdb;pdb.set_trace()
 	city = soup.find('city')
 	if city:
 		if city.text.lower() in CITY_CODES.keys():
@@ -898,24 +914,28 @@ def convert_to_pf_v2(soup):
 			city_tag.append(city.text)
 			property_tag.append(city_tag)
 		else:
-			print "%s incorrect city name" %reference_number
-			send_mail('%s Incorrect city name', 'Please enter the correct name of city',
-				PROPPIX, [agent_email, PROPPIX])
+			err = "incorrect city name"
+			errors.append(err)
+			print err
 	else:
-		print "%s city" %reference_number
-		send_mail('%s: No city provided' %reference_number, 'Please enter the name of city',
-			PROPPIX, [agent_email, PROPPIX])
+		err = "city name is missing"
+		errors.append(err)
+		print err
 	print '%s city' %reference_number
 
 	# community
 	community = soup.find('listingarea')
-	if community.text:
+	if community:
 		community_tag = pf_soup.new_tag('community')
 		subcommunity_tag = pf_soup.new_tag('subcommunity')
 		community_tag.append(community.text)
 		subcommunity_tag.append(community.text)
 		property_tag.append(community_tag)
 		property_tag.append(subcommunity_tag)
+	else:
+		err = "No area name provided"
+		errors.append(err)
+		print err
 
 	print 'community checked'
 
@@ -925,10 +945,9 @@ def convert_to_pf_v2(soup):
 	if building:
 		property_name_tag.append(building.text)
 	else:
-		print "%s no building" %reference_number
-		send_mail('%s no building provided' %reference_number, 'No building info was'
-			'found for this listing. If you wish to provide a building name, please'
-			'enter it in Street Address -> BuildingFloor', PROPPIX, [agent_email, PROPPIX])
+		err = "no building name provided" 
+		errors.append(err)
+		print err
 	property_tag.append(property_name_tag)
 
 	# title
@@ -938,10 +957,10 @@ def convert_to_pf_v2(soup):
 		title_tag.append(CData(title.text))
 		property_tag.append(title_tag)
 	else:
-		print "%s no title" %reference_number
-		send_mail('%s Failed to publish. No title provided' %reference_number, 'Please provide a title for this'
-			'listing in Street Address -> Street Name', PROPPIX, [agent_email, PROPPIX])
-		return None
+		err =  "listing has no title"
+		errors.append(err)
+		print err
+		return (None, errors)
 
 	# description
 	description = soup.find('publicremark')
@@ -950,9 +969,9 @@ def convert_to_pf_v2(soup):
 		description_tag.append(CData(description.text))
 		property_tag.append(description_tag)
 	else:
-		print "%s no description" %reference_number
-		send_mail('%s has no description', 'If you wish to provide description, please fill it up in'
-			'Public Remark', PROPPIX, [agent_email, PROPPIX])
+		err = "listing has no description"
+		errors.append(err)
+		print err
 
 	print 'description checked'
 	# amenities
@@ -968,9 +987,9 @@ def convert_to_pf_v2(soup):
 		size_tag.append(size.text)
 		property_tag.append(size_tag)
 	else:
-		print "%s: no size" %reference_number
-		send_mail('%s: no size provided' %reference_number, 'Please enter a value in SquareFeet', PROPPIX,
-			[agent_email, PROPPIX])
+		err = "listing has no size"
+		errors.append(err)
+		print err
 
 	# bedroom
 	bedrooms = soup.find('bedrooms')
@@ -982,9 +1001,9 @@ def convert_to_pf_v2(soup):
 			bedrooms_tag.append(bedrooms.text)
 		property_tag.append(bedrooms_tag)
 	else:
-		print '%s no bedrooms' %reference_number
-		send_mail('%s: no bedrooms' %reference_number, 'Please check bedrooms again. 100 is for studio, other'
-			'values represent the no.of bedrooms', PROPPIX, [agent_email, PROPPIX])
+		err = 'listing has no bedrooms'
+		errors.append(err)
+		print err
 
 	print '%s bedrooms checked' %reference_number
 
@@ -995,9 +1014,9 @@ def convert_to_pf_v2(soup):
 		bathrooms_tag.append(CData(bathrooms.text))
 		property_tag.append(bathrooms_tag)
 	else:
-		print "%s no bathrooms" %reference_number
-		send_mail('%s has no bathrooms' %reference_number, 'No bathrooms were found for this listing.'
-			'If you wish to provide bathrooms, please fill it up in bathrooms.', PROPPIX, [agent_email, PROPPIX])
+		err = "listing has no bathrooms"
+		errors.append(err)
+		print err
 
 	# agent
 	agent = soup.find('reagent')
@@ -1018,12 +1037,20 @@ def convert_to_pf_v2(soup):
 			email_tag = pf_soup.new_tag('agent_email')
 			email_tag.append(CData(agent.email.text))
 			property_tag.append(email_tag)
+		else:
+			err = "email is missing"
+			errors.append(err)
+			print err
 
 		#phone
 		if agent.cellphone:
 			cellphone_tag = pf_soup.new_tag('agent_phone')
 			cellphone_tag.append(CData(agent.cellphone.text))
 			property_tag.append(cellphone_tag)
+		else:
+			err = "mobile number is missing"
+			errors.append(err)
+			print err
 
 		
 
@@ -1059,4 +1086,4 @@ def convert_to_pf_v2(soup):
 				property_tag.append(photo_tag)
 
 	
-	return (pf_soup, operation)
+	return (pf_soup, operation, errors)
