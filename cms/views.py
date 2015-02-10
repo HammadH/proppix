@@ -452,7 +452,7 @@ def build_image_path(refno, imgId=None, imgCaption=None):
 				return paths
 
 def watermark_image(image):
-	watermark = Image.open(settings.WATERMARK).convert("RGB")
+	watermark = Image.open(settings.WATERMARK).convert("RGBA")
 	alpha = watermark.split()[3]
 	alpha = ImageEnhance.Brightness(alpha).enhance(settings.WATERMARK_OPACITY)
 	watermark.putalpha(alpha)
