@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, date
 from cStringIO import StringIO
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 from django.conf import settings
 from django.views.generic import View
@@ -380,6 +380,19 @@ def build_image_path(refno, imgId=None, imgCaption=None):
 
 				return paths
 
+def watermark_image(image):
+	watermark = Image.open(settings.WATERMARK).convert("RGBA")
+	alpha = watermark.split()[3]
+	alpha = ImageEnhance.Brightness(alpha).enhance(settings.WATERMARK_OPACITY)
+	watermark.putalpha(alpha)
+	layer = Image.new("RGB", image.size, (0,0,0,0))
+	#positioning in bottom right corner
+	watermark_position = (image.size[0]-watermark.size[0], image.size[1]-watermark.size[1])
+	layer.paste(watermark, watermark_position)
+	return Image.composite(layer, image, layer)
+
+
+
 
 def build_images(images, refno):
 		"""
@@ -407,6 +420,9 @@ def build_images(images, refno):
 					try:
 						image_exists = open(full_img_path, 'r')
 					except IOError:
+						print 'watermarking image'
+						img = watermark_image(img)
+						print 'watermarking complete'
 						print 'saving image %s' %full_img_path
 						img.save(full_img_path)
 						print 'save comple.'
