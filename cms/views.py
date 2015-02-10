@@ -6,6 +6,7 @@ from PIL import Image
 from django.conf import settings
 from django.views.generic import View
 from django.http import HttpResponse, Http404
+from django.core.mail import send_mail
 
 
 from bs4 import BeautifulSoup, CData
@@ -14,6 +15,56 @@ bufsize = 0 # making file unbuffered
 
 
 DALY = 'daly@propertyissmo.com'
+PROPPIX = 'support@prop-pix.com'
+
+CITY_CODES = {
+  'dubai':2,
+  'abu dhabi':3,
+  'aas al khaimeh':11,
+  'sharjah':12,
+  'fujeirah':13,
+  'ajman':14,
+  'umm al quwain':15,
+  'al ain':39
+				}
+
+
+TYPE_SALE = ['s', 'S']
+TYPE_RENT = ['r','R']
+COMMERCIAL_CODES = ['RE', 'OF', 'IN', 'ST', 're', 'of', 'in', 'st']
+SUBTYPE_COMMERCIAL = ['CO', 'co']
+MULTIPLE_UNITS = ['BU', 'bu']
+LAND_FOR_SALE = ['LA', 'la']
+APARTMENT = ['ap', 'AP']
+VILLA = ['vi', 'VI']
+
+DBZ_AMENITIES = {'balcony': 'BA',
+ 'built in kitchen appliances': 'BK',
+ 'built in wardrobes': 'BW',
+ 'central a/c & heating': 'AC',
+ 'concierge service': 'CS',
+ 'covered parking': 'CP',
+ 'maid service': 'MS',
+ 'maids room': 'MR',
+ 'pets allowed': 'PA',
+ 'private garden': 'PG',
+ 'private gym': 'PY',
+ 'private jacuzzi': 'PJ',
+ 'private pool': 'PP',
+ 'security': 'SE',
+ 'shared gym': 'SY',
+ 'shared pool': 'SP',
+ 'shared spa': 'SS',
+ 'study': 'ST',
+ 'view of landmark': 'BL',
+ 'view of water': 'VW',
+ 'walk': 'WC',
+ 'dining in building': 'DB',
+ 'retail in building': 'RB',
+ 'available network': 'AN',
+ 'available furnished': 'AF',
+ 'conference room': 'CR',
+ 'furnished': 1 }
 
 
 class IssmoDubizzleFull(View):
@@ -29,19 +80,20 @@ class IssmoDubizzleLive(View):
 	def post(self, request, *args, **kwargs):
 		print 'dbz got post'
 		soup = BeautifulSoup(request.POST.get('<?xml version', None))
+		try:
+			agent_email = soup.find('email').text
+		except:
+			agent_email = DALY
 		if soup is None:
 			print "soup returned none"
 			return Http404('Soup returned None')
 		else:
-			dbz_soup = convert_to_dbz(soup)
+			dbz_soup, errors = convert_to_dbz(soup)
 			# 1. build dbz 
 			if dbz_soup:
-				print '%s' %dbz_soup
 				# 2. soup feed_file
 				feed_file = open(settings.DBZ_HOURLY_XML, 'rb', bufsize)
-
 				feed_file_soup = BeautifulSoup(feed_file)
-
 				# if not feed_file_soup.dubizzlepropertyfeed.is_empty_element:
 				try:
 					feed_file_soup.dubizzlepropertyfeed.unwrap()
@@ -70,65 +122,29 @@ class IssmoDubizzleLive(View):
 					dbz_feed.append(feed_file_soup)
 					feed_file.write(str(dbz_feed))
 					full_dump_file.write(str(dbz_feed))
-
+				if errors:
+					send_mail('%s: Successful on dubizzle' %ref_no, 'Please take care of the following \n %s' %[error for error in errors],
+					 PROPPIX, [agent_email, PROPPIX])
+				else:
+					send_mail('%s: Successful on dubizzle' %ref_no, 'Listing was published without any errors', PROPPIX, [agent_email, PROPPIX])
 				return HttpResponse(status=201)
 						#return HttpResponse(dbz_soup, content_type="application/xhtml+xml")
 			else:
-				return Http404('dbz soup returned None')
-
-CITY_CODES = {
-  'dubai':2,
-  'abu dhabi':3,
-  'aas al khaimeh':11,
-  'sharjah':12,
-  'fujeirah':13,
-  'ajman':14,
-  'umm al quwain':15,
-  'al ain':39
-				}
-
-
-TYPE_SALE = ['s', 'S']
-TYPE_RENT = ['r','R']
-COMMERCIAL_CODES = ['RE', 'OF', 'IN', 'ST', 're', 'of', 'in', 'st']
-SUBTYPE_COMMERCIAL = ['CO', 'co']
-MULTIPLE_UNITS = ['BU', 'bu']
-LAND_FOR_SALE = ['LA', 'la']
-APARTMENT = ['ap', 'AP']
-VILLA = ['vi', 'VI']
-
-DBZ_AMENITIES = {'Balcony': 'BA',
- 'Built in Kitchen Appliances': 'BK',
- 'Built in Wardrobes': 'BW',
- 'Central A/C & Heating': 'AC',
- 'Concierge Service': 'CS',
- 'Covered Parking': 'CP',
- 'Maid Service': 'MS',
- 'Maids Room': 'MR',
- 'Pets Allowed': 'PA',
- 'Private Garden': 'PG',
- 'Private Gym': 'PY',
- 'Private Jacuzzi': 'PJ',
- 'Private Pool': 'PP',
- 'Security': 'SE',
- 'Shared Gym': 'SY',
- 'Shared Pool': 'SP',
- 'Shared Spa': 'SS',
- 'Study': 'ST',
- 'View of Landmark': 'BL',
- 'View of Water': 'VW',
- 'Walk': 'WC',
- 'Dining in Building': 'DB',
- 'Retail in Building': 'RB',
- 'Available Network': 'AN',
- 'Available Furnished': 'AF',
- 'Conference Room': 'CR',
- 'Furnished': 1 }
+				try:
+					ref_no = soup.find('mlsnumber').text
+				except:
+					ref_no = None
+				send_mail('%s: Failed on dubizzle' %ref_no, '%s' %[error for error in errors], PROPPIX, [agent_email, PROPPIX])
+				return HttpResponse(status=404)
 
 def convert_to_dbz(soup):
+		errors = []
 		#soup is Beautifulsoup
 		MLSNumber = soup.find('mlsnumber')
+
 		if MLSNumber is not None:
+				# varaible to use in emails. 
+				_mls = MLSNumber.text
 				#start by creating a parent <property> tag
 				dbz_soup = BeautifulSoup('<property></property>')
 
@@ -139,14 +155,18 @@ def convert_to_dbz(soup):
 						type_tag = dbz_soup.new_tag('type')
 						type_tag.append('RP')
 				elif codes[0] in TYPE_SALE:
-						print 'skipping sales on dbz'
-						return None
+						err = "Skipping sale listing from dbz"
+						errors.append(err)
+						print err
+						return (None, errors)
 						type_tag = dbz_soup.new_tag('type')
 						type_tag.append('SP')
 				else:
 						#log and email
-						print "incompatible mlsnumber"
-						return None
+						err = "%s incompatible mlsnumber" %_mls
+						errors.append(err)
+						print err
+						return (None, errors)
 				### adding type tag ### 
 				property_tag.append(type_tag)
 				if codes[1] in APARTMENT:
@@ -157,8 +177,10 @@ def convert_to_dbz(soup):
 						subtype_tag.append('VI')
 				elif codes[1] in SUBTYPE_COMMERCIAL:
 						if codes[2] not in COMMERCIAL_CODES or not codes[2]:
-								print "commercial codes"
-								return None
+								err = "%s Incorrect or no commercial codes" %_mls
+								errors.append(err)
+								print err
+								return (None, errors)
 						else:
 								subtype_tag = dbz_soup.new_tag('subtype')
 								subtype_tag.append('CO')
@@ -172,31 +194,46 @@ def convert_to_dbz(soup):
 						subtype_tag.new_tag('subtype')
 						subtype_tag.append('LA')
 				else:
-						print 'subtype'
-						return None
+						err = 'Incorrect or missing subtype code. Wrong MLSNumber! Please check codes'
+						errors.append(err)
+						return (None, errors)
 				### adding type tag ### 
 				property_tag.append(subtype_tag)
 		else:
-				print 'MLSNumber is empty'
-				return None
+				err = 'MLSNumber is empty'
+				errors.append(err)
+				return (None, errors)
+
 		## status tag ##
-		status = soup.find('listingstatus').text
-		status_tag = dbz_soup.new_tag('status')
-		if status == 'Active':
+		status = soup.find('listingstatus')
+		if status:
+			status_tag = dbz_soup.new_tag('status')
+			if status.text == 'Active':
 				status_tag.append('vacant')
-		else:
+			else:
 				status_tag.append('deleted')
-		property_tag.append(status_tag)
+			property_tag.append(status_tag)
+		else:
+			err = "Listing status is empty. Please specify if it is active or closed."
+			errors.append(err)
+			return (None, errors)
+			
+
 		## ref no tag ##
 		ref_no_tag = dbz_soup.new_tag('refno')
 		ref_no_tag.append(MLSNumber.text)
 		property_tag.append(ref_no_tag)
+		
 		## title tag
 		title_tag = dbz_soup.new_tag('title')
 		title = soup.find('streetname').text
 		if title:
 				title_tag.append(title)
 				property_tag.append(title_tag)
+		else:
+			err = "Title is empty. Please fill it up in Street Name."
+			errors.append(err)
+			return (None, errors)
 
 
 		## CDATA description tag
@@ -206,26 +243,38 @@ def convert_to_dbz(soup):
 				description = CData(description.text)
 				description_tag.append(description)
 				property_tag.append(description_tag)
-		else: return None # description is required field
+		else: 
+			err = "Listing has no description. Please fill up public remarks."
+			errors.append(err)
+			return (None, errors) # description is required field
 
 		## city tag ##
 		city_tag = dbz_soup.new_tag('city')
 		city = soup.find('city')
 		if city:
-				city = city.text
-				city = city.lower()
-				city_code = CITY_CODES[city]
+			if city.text.lower() in CITY_CODES.keys():
+				city_code = CITY_CODES[city.text.lower()]
 				city_tag.append(str(city_code))
 				property_tag.append(city_tag)
+			else:
+				err = "Incorrect city name"
+				errors.append(err)
+				return (None, errors)
+		else:
+			err =  "City name is empty. Please provide one." 
+			errors.append(err)
+			return (None, errors)
 
 		## size ##
 		size_tag = dbz_soup.new_tag('size')
 		size = soup.find('squarefeet')
 		if size:
-				size_value = size.text
-				size_tag.append(size_value)
-				property_tag.append(size_tag)
-		else: return None
+			size_tag.append(size.text)
+			property_tag.append(size_tag)
+		else: 
+			err =  "Square feet is empty, please fill it up."
+			errors.append(err)
+			return (None, errors)
 
 		## price ##
 		price_tag = dbz_soup.new_tag('price')
@@ -233,6 +282,10 @@ def convert_to_dbz(soup):
 		if price:
 				price_tag.append(price.text)
 				property_tag.append(price_tag)
+		else:
+			err = "List price is empty"
+			errors.append(err)
+			return (None, errors)
 
 		## location ##
 		location_text_tag = dbz_soup.new_tag('locationtext')
@@ -240,13 +293,21 @@ def convert_to_dbz(soup):
 		if location_text:
 				location_text_tag.append(location_text.text)
 				property_tag.append(location_text_tag)
+		else:
+			err = "Area name is empty."
+			errors.append(err)
+			return (None, errors)
 
 		## building ##
 		building_tag = dbz_soup.new_tag('building')
 		building = soup.find('buildingfloor')
-		if building:
-				building_tag.append(building.text)
-				property_tag.append(building_tag)
+		if building.text:
+			building_tag.append(building.text)
+		else:
+			err = "Building name is empty. Please fill buildingfloor"
+			errors.append(err)
+		property_tag.append(building_tag)
+
 
 		## lastupdate ##
 		lastupdated_tag = dbz_soup.new_tag('lastupdated')
@@ -260,6 +321,9 @@ def convert_to_dbz(soup):
 				email_tag = dbz_soup.new_tag('contactemail')
 				email_tag.append(email.text)
 				property_tag.append(email_tag)
+		else:
+			err = 'email is empty'
+			errors.append(err)
 
 		## contactnumber ##
 		contactnumber_tag = dbz_soup.new_tag('contactnumber')
@@ -267,7 +331,9 @@ def convert_to_dbz(soup):
 		if cellphone:
 				contactnumber_tag.append(cellphone.text)
 				property_tag.append(contactnumber_tag)
-
+		else:
+			err = 'mobile number is empty'
+			errors.append(err)
 		## images ##
 
 		images = soup.find_all('picture')
@@ -288,22 +354,30 @@ def convert_to_dbz(soup):
 						property_tag.append(image_tag)
 
 		
-		## bedroosm ##                        
-		bedrooms = soup.find('bedrooms')
+		## bedrooms ##                        
 		if subtype_tag.text in VILLA or subtype_tag.text in APARTMENT:
-			bedrooms_tag = dbz_soup.new_tag('bedrooms')
-			if bedrooms.text and bedrooms.text != '100':
-				bedrooms_tag.append(bedrooms.text)
-			elif bedrooms.text and bedrooms.text == '100':
-				bedrooms_tag.append('0')
-			property_tag.append(bedrooms_tag)
+			bedrooms = soup.find('bedrooms')
+			if bedrooms:
+				bedrooms_tag = dbz_soup.new_tag('bedrooms')
+				if bedrooms.text != '100':
+					bedrooms_tag.append(bedrooms.text)
+				elif bedrooms.text == '100':
+					bedrooms_tag.append('0')
+				property_tag.append(bedrooms_tag)
+			else:
+				err = "No.of bedrooms is not provided. Please specify a number or 100 for studio"
+				errors.append(err)
+				return (None, errors)
 
 		## bathrooms ##
 		bathrooms = soup.find('bathtotal')
-		if bathrooms.text:
+		if bathrooms:
 			bathrooms_tag = dbz_soup.new_tag('bathrooms')
 			bathrooms_tag.append(bathrooms.text)
 			property_tag.append(bathrooms_tag)
+		else:
+			err = "No.of bathrooms is empty"
+			errors.append(err)
 
 		## ameneties ##
 		amenities = []
@@ -319,20 +393,19 @@ def convert_to_dbz(soup):
 
 		ac = soup.find('cooling')
 		if ac:
-			if ac.text:
-				amenities.append('AC')
+			amenities.append('AC')
 
 		features = soup.find_all('feature')
 		if features:
 			for feature in features:
-				print 'checking features'
-				if feature.text in DBZ_AMENITIES:
-					if feature.text == 'Furnished':
+				print '%s checking features' %_mls
+				if feature.text in DBZ_AMENITIES.keys():
+					if feature.text.lower() == 'furnished':
 						funished_tag = dbz_soup.new_tag('furnished')
 						funished_tag.append('1')
 						property_tag.append(funished_tag)
 					else:
-						amenities.append(DBZ_AMENITIES[feature.text])
+						amenities.append(DBZ_AMENITIES[feature.text.lower()])
 	
 		print 'checking private'
 		if len(amenities) == 1:
@@ -345,22 +418,22 @@ def convert_to_dbz(soup):
 				amenities = amenities_string
 		else:
 			amenities = ''
-		print amenities
+
 		if subtype_tag.text in VILLA or subtype_tag.text in APARTMENT:
 			p_amenities = dbz_soup.new_tag('privateamenities')
-			print p_amenities
+			print "%s :%s" %(_mls, p_amenities)
 			p_amenities.append(amenities)
 			property_tag.append(p_amenities)
 		elif subtype_tag.text in SUBTYPE_COMMERCIAL:
 			p_amenities = dbz_soup.new_tag('commercialamenities')
-			print p_amenities
+			print "%s :%s" %(_mls, p_amenities)
 			p_amenities.append(amenities)
 			property_tag.append(p_amenities)
 
 
 		
 		print 'returning soup'
-		return dbz_soup
+		return (dbz_soup, errors)
 
 
 def build_image_path(refno, imgId=None, imgCaption=None):
@@ -701,9 +774,15 @@ class IssmoPropertyFinderLive_V2(View):
 		print 'pf_v2 got post'
 		soup = BeautifulSoup(request.POST.get('<?xml version', None))
 		pf_soup = convert_to_pf_v2(soup)
-		
-		if pf_soup is not None:
-			pf_soup, operation = pf_soup[0], pf_soup[1]
+
+		# get agent email to send notifications
+		try:
+			agent_email = pf_soup.find('email').text
+		except:
+			agent_email = DALY
+
+		if pf_soup[0] is not None:
+			pf_soup, operation, errors = pf_soup[0], pf_soup[1], pf_soup[2]
 			feed_file = open(settings.PF_HOURLY_XML_V2, 'rb+', bufsize)
 			feed_file_soup = BeautifulSoup(feed_file)
 			try:
@@ -732,11 +811,28 @@ class IssmoPropertyFinderLive_V2(View):
 			
 			output_feed_file.write(str(pf_feed))
 			full_dump_file.write(str(pf_feed))
+			if not errors:
+				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
+				'successful on PropertyFinder' %reference_number,
+				 PROPPIX, [pf_soup.find('agent_email').text, PROPPIX])
+			else:
+				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
+				'published with on PropertyFinder but has errors: \n %s' %(reference_number,[error for error in errors]),
+				 PROPPIX, [pf_soup.find('agent_email').text, PROPPIX])
+
 			return HttpResponse(status=201)
 		else:
-			return Http404('pf soup returned None')
+			if soup.find('mlsnumber'):
+				reference_number = soup.find('mlsnumber').text
+			else: reference_number = None
+			send_mail('%s Listing failed to publish' %reference_number, "%s" %[error for error in pf_soup[1]], 
+			PROPPIX, [agent_email, PROPPIX])
+			return HttpResponse(status=404)
 
 def convert_to_pf_v2(soup):
+	# messages to notify to agent
+	errors = []
+
 	pf_soup = BeautifulSoup("<listing></listing>")
 	property_tag = pf_soup.listing
 	
@@ -759,15 +855,12 @@ def convert_to_pf_v2(soup):
 		reference_number_tag.append(reference_number)
 		property_tag.append(reference_number_tag)
 	else:
-		# message = "Missing reference no!"
-		# if  pf_soup.find('email') is not None:
-		# 	_to = pf_soup.find('email').text
-		# else:
-		# 	_to = DALY
-		# send_mail(message, str(pf_soup), _to)
-		return None
+		err =  'missing reference number'
+		errors.append(err)
+		print err
+		return (None, errors)
 
-	print 'ref checked'
+	print '%s ref checked' %reference_number
 
 	#offering type
 	codes = reference.text.split('-')
@@ -781,12 +874,15 @@ def convert_to_pf_v2(soup):
 			offering_type = 'Residential for Sale'
 		elif codes[1] in SUBTYPE_COMMERCIAL:
 			offering_type = 'Commercial for Sale'
-	if offering_type:
+	try:
 		offering_type_tag = pf_soup.new_tag('category')
 		offering_type_tag.append(offering_type)
 		property_tag.append(offering_type_tag)
-	else:
-		return None
+	except:
+		err = "%s: error in codes" %reference_number
+		errors.append(err)
+		print err
+		return (None, errors)
 
 
 #COMMERCIAL_CODES = ['RE', 'OF', 'IN', 'ST', 're', 'of', 'in', 'st']
@@ -810,7 +906,10 @@ def convert_to_pf_v2(soup):
 		property_type_tag = pf_soup.new_tag('type')
 		property_type_tag.append(property_type)
 		property_tag.append(property_type_tag)
-
+	else:
+		err = "%s: incorrect codes" %reference_number
+		errors.append(err)
+		print err
 	print 'codes checked'
 
 	# price
@@ -820,35 +919,54 @@ def convert_to_pf_v2(soup):
 		price_tag.append(price.text)
 		property_tag.append(price_tag)
 	else:
-		return None
-	print 'price check'
+		err = "error in price"
+		errors.append(err)
+		print err
+		return (None, errors)
+	print '%s price check' %reference_number
 		
 	#city
 	city = soup.find('city')
 	if city:
-		city_tag = pf_soup.new_tag('city')
-		city_tag.append(city.text)
-		property_tag.append(city_tag)
-
-	print 'city'
+		if city.text.lower() in CITY_CODES.keys():
+			city_tag = pf_soup.new_tag('city')
+			city_tag.append(city.text)
+			property_tag.append(city_tag)
+		else:
+			err = "incorrect city name"
+			errors.append(err)
+			print err
+	else:
+		err = "city name is missing"
+		errors.append(err)
+		print err
+	print '%s city' %reference_number
 
 	# community
 	community = soup.find('listingarea')
-	if community.text:
+	if community:
 		community_tag = pf_soup.new_tag('community')
 		subcommunity_tag = pf_soup.new_tag('subcommunity')
 		community_tag.append(community.text)
 		subcommunity_tag.append(community.text)
 		property_tag.append(community_tag)
 		property_tag.append(subcommunity_tag)
+	else:
+		err = "No area name provided"
+		errors.append(err)
+		print err
 
-	print 'community'
+	print 'community checked'
 
 	# building
 	building = soup.find('buildingfloor')
 	property_name_tag = pf_soup.new_tag('property')
-	if building.text:
+	if building:
 		property_name_tag.append(building.text)
+	else:
+		err = "no building name provided" 
+		errors.append(err)
+		print err
 	property_tag.append(property_name_tag)
 
 	# title
@@ -858,7 +976,10 @@ def convert_to_pf_v2(soup):
 		title_tag.append(CData(title.text))
 		property_tag.append(title_tag)
 	else:
-		return None
+		err =  "listing has no title"
+		errors.append(err)
+		print err
+		return (None, errors)
 
 	# description
 	description = soup.find('publicremark')
@@ -866,6 +987,10 @@ def convert_to_pf_v2(soup):
 		description_tag = pf_soup.new_tag('description_en')
 		description_tag.append(CData(description.text))
 		property_tag.append(description_tag)
+	else:
+		err = "listing has no description"
+		errors.append(err)
+		print err
 
 	print 'description checked'
 	# amenities
@@ -880,6 +1005,10 @@ def convert_to_pf_v2(soup):
 		size_tag = pf_soup.new_tag('sqft')
 		size_tag.append(size.text)
 		property_tag.append(size_tag)
+	else:
+		err = "listing has no size"
+		errors.append(err)
+		print err
 
 	# bedroom
 	bedrooms = soup.find('bedrooms')
@@ -890,8 +1019,12 @@ def convert_to_pf_v2(soup):
 		else:
 			bedrooms_tag.append(bedrooms.text)
 		property_tag.append(bedrooms_tag)
+	else:
+		err = 'listing has no bedrooms'
+		errors.append(err)
+		print err
 
-	print 'bedrooms checked'
+	print '%s bedrooms checked' %reference_number
 
 	# bathrooms
 	bathrooms = soup.find('bathtotal')
@@ -899,6 +1032,10 @@ def convert_to_pf_v2(soup):
 		bathrooms_tag = pf_soup.new_tag('bathroom')
 		bathrooms_tag.append(CData(bathrooms.text))
 		property_tag.append(bathrooms_tag)
+	else:
+		err = "listing has no bathrooms"
+		errors.append(err)
+		print err
 
 	# agent
 	agent = soup.find('reagent')
@@ -919,12 +1056,20 @@ def convert_to_pf_v2(soup):
 			email_tag = pf_soup.new_tag('agent_email')
 			email_tag.append(CData(agent.email.text))
 			property_tag.append(email_tag)
+		else:
+			err = "email is missing"
+			errors.append(err)
+			print err
 
 		#phone
 		if agent.cellphone:
 			cellphone_tag = pf_soup.new_tag('agent_phone')
 			cellphone_tag.append(CData(agent.cellphone.text))
 			property_tag.append(cellphone_tag)
+		else:
+			err = "mobile number is missing"
+			errors.append(err)
+			print err
 
 		
 
@@ -960,4 +1105,4 @@ def convert_to_pf_v2(soup):
 				property_tag.append(photo_tag)
 
 	
-	return (pf_soup, operation)
+	return (pf_soup, operation, errors)
