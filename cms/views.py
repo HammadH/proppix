@@ -452,11 +452,12 @@ def build_image_path(refno, imgId=None, imgCaption=None):
 				return paths
 
 def watermark_image(image):
+	image = image.convert('RGB')
 	watermark = Image.open(settings.WATERMARK).convert("RGBA")
 	alpha = watermark.split()[3]
 	alpha = ImageEnhance.Brightness(alpha).enhance(settings.WATERMARK_OPACITY)
 	watermark.putalpha(alpha)
-	layer = Image.new("RGB", image.size, (0,0,0,0))
+	layer = Image.new("RGBA", image.size, (0,0,0,0))
 	#positioning in bottom right corner
 	watermark_position = (image.size[0]-watermark.size[0], image.size[1]-watermark.size[1])
 	layer.paste(watermark, watermark_position)
