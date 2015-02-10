@@ -430,8 +430,6 @@ def convert_to_dbz(soup):
 			p_amenities.append(amenities)
 			property_tag.append(p_amenities)
 
-
-		
 		print 'returning soup'
 		return (dbz_soup, errors)
 
@@ -463,9 +461,6 @@ def watermark_image(image):
 	watermark_position = (image.size[0]-watermark.size[0], image.size[1]-watermark.size[1])
 	layer.paste(watermark, watermark_position)
 	return Image.composite(layer, image, layer)
-
-
-
 
 def build_images(images, refno):
 		"""
