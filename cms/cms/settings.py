@@ -104,6 +104,7 @@ DOMAIN_NAME = 'http://www.prop-pix.com/'
 
 MEDIA_URL = 'media/'
 
+
 ## Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.webfaction.com'
@@ -111,3 +112,6 @@ EMAIL_HOST_USER = 'prop_pix'
 EMAIL_HOST_PASSWORD = 'quakeroats'
 DEFAULT_FROM_EMAIL = 'support@prop-pix.com'
 SERVER_EMAIL = 'support@prop-pix.com'
+
+WATERMARK = os.path.join(BASE_DIR, 'logo_final.png')
+WATERMARK_OPACITY = 0.25
