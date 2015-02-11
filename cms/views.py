@@ -1,4 +1,5 @@
 import os
+import csv
 from datetime import datetime, date
 from cStringIO import StringIO
 from PIL import Image, ImageEnhance
@@ -787,12 +788,6 @@ class IssmoPropertyFinderLive_V2(View):
 		soup = BeautifulSoup(request.POST.get('<?xml version', None))
 		pf_soup = convert_to_pf_v2(soup)
 
-		# get agent email to send notifications
-		try:
-			agent_email = pf_soup.find('email').text
-		except:
-			agent_email = DALY
-
 		if pf_soup[0] is not None:
 			pf_soup, operation, errors = pf_soup[0], pf_soup[1], pf_soup[2]
 			feed_file = open(settings.PF_HOURLY_XML_V2, 'rb+', bufsize)
@@ -823,14 +818,20 @@ class IssmoPropertyFinderLive_V2(View):
 			
 			output_feed_file.write(str(pf_feed))
 			full_dump_file.write(str(pf_feed))
+
+			try:
+				agent_email = pf_soup.find('email').text
+			except:
+				agent_email = DALY
+
 			if not errors:
 				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
 				'successful on PropertyFinder' %reference_number,
-				 PROPPIX, [pf_soup.find('agent_email').text, PROPPIX])
+				 PROPPIX, [agent_email, PROPPIX])
 			else:
 				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
 				'published with on PropertyFinder but has errors: \n %s' %(reference_number,[error for error in errors]),
-				 PROPPIX, [pf_soup.find('agent_email').text, PROPPIX])
+				 PROPPIX, [agent_email, PROPPIX])
 
 			return HttpResponse(status=201)
 		else:
@@ -867,7 +868,7 @@ def convert_to_pf_v2(soup):
 		reference_number_tag.append(reference_number)
 		property_tag.append(reference_number_tag)
 	else:
-		err =  'missing reference number'
+		err = 'missing reference number'
 		errors.append(err)
 		print err
 		return (None, errors)
@@ -958,11 +959,8 @@ def convert_to_pf_v2(soup):
 	community = soup.find('listingarea')
 	if community:
 		community_tag = pf_soup.new_tag('community')
-		subcommunity_tag = pf_soup.new_tag('subcommunity')
 		community_tag.append(community.text)
-		subcommunity_tag.append(community.text)
 		property_tag.append(community_tag)
-		property_tag.append(subcommunity_tag)
 	else:
 		err = "No area name provided"
 		errors.append(err)
@@ -970,15 +968,24 @@ def convert_to_pf_v2(soup):
 
 	print 'community checked'
 
-	# building
+	# building & subcom
 	building = soup.find('buildingfloor')
 	property_name_tag = pf_soup.new_tag('property')
+	subcommunity_tag = pf_soup.new_tag('subcommunity')
 	if building:
-		property_name_tag.append(building.text)
+		subcommunity = get_subcommunity_for_building(building.text)
+		if subcommunity:
+			subcommunity_tag.append(subcommunity)
+			property_name_tag.append(building.text)
+		else:
+			err = "Wrong building name. Please check and enter the official name." 
+			errors.append(err)
+			print err
 	else:
-		err = "no building name provided" 
+		err = "No building name provided" 
 		errors.append(err)
 		print err
+	property_tag.append(subcommunity_tag)
 	property_tag.append(property_name_tag)
 
 	# title
@@ -1118,3 +1125,13 @@ def convert_to_pf_v2(soup):
 
 	
 	return (pf_soup, operation, errors)
+
+def get_subcommunity_for_building(building):
+	csvfile = open(settings.PF_LOCATION_LIST, 'r')
+	reader = csv.reader(csvfile)
+	for row in reader:
+		if row[-1] == building:
+			subcommunity = row[-2]
+			break
+	csvfile.close()
+	return subcommunity

@@ -98,6 +98,7 @@ PF_FULL_XML = XML_ROOT + 'pf_full.xml'
 PF_HOURLY_XML_V2 = XML_ROOT + 'pf_hourly_v2.xml'
 PF_FULL_XML_V2 = XML_ROOT + 'pf_full_v2.xml'
 
+PF_LOCATION_LIST = BASE_DIR + '/pf_locations.csv'
 
 DOMAIN_NAME = 'http://www.prop-pix.com/'
 
