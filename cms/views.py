@@ -458,8 +458,8 @@ def watermark_image(image):
 	alpha = ImageEnhance.Brightness(alpha).enhance(settings.WATERMARK_OPACITY)
 	watermark.putalpha(alpha)
 	layer = Image.new("RGBA", image.size, (0,0,0,0))
-	#positioning in bottom right corner
-	watermark_position = (image.size[0]-watermark.size[0], image.size[1]-watermark.size[1])
+	#positioning in center
+	watermark_position = (image.size[0]/2-watermark.size[0]/2, image.size[1]/2-watermark.size[1]/2)
 	layer.paste(watermark, watermark_position)
 	return Image.composite(layer, image, layer)
 
