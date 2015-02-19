@@ -876,7 +876,7 @@ def convert_to_pf_v2(soup):
 	print '%s ref checked' %reference_number
 
 	#offering type
-	codes = reference.text.split('-')
+	codes = reference_number.split('-')
 	if codes[0] in TYPE_RENT:
 		if codes[1] in APARTMENT or codes[1] in VILLA:
 			offering_type = 'Residential for Rent'
@@ -910,11 +910,11 @@ def convert_to_pf_v2(soup):
 				if codes[2] == 'RE':
 					property_type = 'Retail'
 				elif codes[2] == 'OF':
-					property_tag == 'Office Space'
+					property_type == 'Office Space'
 				elif codes[2] == 'IN':
-					property_tag = 'Warehouse'
+					property_type = 'Warehouse'
 				elif codes[2] == 'ST':
-					property_tag = 'Staff Accommodation'
+					property_type = 'Staff Accommodation'
 
 		property_type_tag = pf_soup.new_tag('type')
 		property_type_tag.append(property_type)
