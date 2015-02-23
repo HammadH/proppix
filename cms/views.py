@@ -84,7 +84,7 @@ class IssmoDubizzleLive(View):
 		try:
 			agent_email = soup.find('email').text
 		except:
-			agent_email = DALY
+			agent_email = None
 		if soup is None:
 			print "soup returned none"
 			return Http404('Soup returned None')
@@ -125,9 +125,9 @@ class IssmoDubizzleLive(View):
 					full_dump_file.write(str(dbz_feed))
 				if errors:
 					send_mail('%s: Successful on dubizzle' %ref_no, 'Please take care of the following \n %s' %[error for error in errors],
-					 PROPPIX, [agent_email, PROPPIX])
+					 PROPPIX, [agent_email,])
 				else:
-					send_mail('%s: Successful on dubizzle' %ref_no, 'Listing was published without any errors', PROPPIX, [agent_email, PROPPIX])
+					send_mail('%s: Successful on dubizzle' %ref_no, 'Listing was published without any errors', PROPPIX, [agent_email, ])
 				return HttpResponse(status=201)
 						#return HttpResponse(dbz_soup, content_type="application/xhtml+xml")
 			else:
@@ -135,7 +135,7 @@ class IssmoDubizzleLive(View):
 					ref_no = soup.find('mlsnumber').text
 				except:
 					ref_no = None
-				send_mail('%s: Failed on dubizzle' %ref_no, '%s' %[error for error in errors], PROPPIX, [agent_email, PROPPIX])
+				send_mail('%s: Failed on dubizzle' %ref_no, '%s' %[error for error in errors], PROPPIX, [agent_email,])
 				return HttpResponse(status=404)
 
 def convert_to_dbz(soup):
@@ -822,16 +822,16 @@ class IssmoPropertyFinderLive_V2(View):
 			try:
 				agent_email = pf_soup.find('email').text
 			except:
-				agent_email = DALY
+				agent_email = None
 
 			if not errors:
 				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
 				'successful on PropertyFinder' %reference_number,
-				 PROPPIX, [agent_email, PROPPIX])
+				 PROPPIX, [agent_email,])
 			else:
 				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
 				'published with on PropertyFinder but has errors: \n %s' %(reference_number,[error for error in errors]),
-				 PROPPIX, [agent_email, PROPPIX])
+				 PROPPIX, [agent_email,])
 
 			return HttpResponse(status=201)
 		else:
@@ -839,7 +839,7 @@ class IssmoPropertyFinderLive_V2(View):
 				reference_number = soup.find('mlsnumber').text
 			else: reference_number = None
 			send_mail('%s Listing failed to publish' %reference_number, "%s" %[error for error in pf_soup[1]], 
-			PROPPIX, [agent_email, PROPPIX])
+			PROPPIX, [agent_email, ])
 			return HttpResponse(status=404)
 
 def convert_to_pf_v2(soup):
