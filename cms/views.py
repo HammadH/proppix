@@ -145,13 +145,13 @@ def convert_to_dbz(soup):
 
 		if MLSNumber is not None:
 				# varaible to use in emails. 
-				_mls = MLSNumber.text
+				_mls = MLSNumber.text.strip()
 				#start by creating a parent <property> tag
 				dbz_soup = BeautifulSoup('<property></property>')
 
 				property_tag = dbz_soup.property
 				#calculate the ref_no
-				codes = MLSNumber.text.split('-')
+				codes = _mls.split('-')
 				if codes[0] in TYPE_RENT:
 						type_tag = dbz_soup.new_tag('type')
 						type_tag.append('RP')
@@ -222,7 +222,7 @@ def convert_to_dbz(soup):
 
 		## ref no tag ##
 		ref_no_tag = dbz_soup.new_tag('refno')
-		ref_no_tag.append(MLSNumber.text)
+		ref_no_tag.append(_mls)
 		property_tag.append(ref_no_tag)
 		
 		## title tag
@@ -863,7 +863,7 @@ def convert_to_pf_v2(soup):
 	# reference 
 	reference = soup.find('mlsnumber')
 	if reference:
-		reference_number = reference.text
+		reference_number = reference.text.strip()
 		reference_number_tag = pf_soup.new_tag('reference')
 		reference_number_tag.append(reference_number)
 		property_tag.append(reference_number_tag)
@@ -910,7 +910,7 @@ def convert_to_pf_v2(soup):
 				if codes[2] == 'RE':
 					property_type = 'Retail'
 				elif codes[2] == 'OF':
-					property_type == 'Office Space'
+					property_type = 'Office Space'
 				elif codes[2] == 'IN':
 					property_type = 'Warehouse'
 				elif codes[2] == 'ST':
@@ -976,8 +976,9 @@ def convert_to_pf_v2(soup):
 		subcommunity = get_subcommunity_for_building(building.text)
 		if subcommunity:
 			subcommunity_tag.append(subcommunity)
-			property_name_tag.append(building.text)
 		else:
+			subcommunity_tag.append(building.text)
+			property_name_tag.append(building.text)
 			err = "Wrong building name. Please check and enter the official name." 
 			errors.append(err)
 			print err
