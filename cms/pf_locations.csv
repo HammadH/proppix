@@ -12,7 +12,7 @@ Abu Dhabi,Airport Road,Airport Road,Sheikh Nahyan Bin Zayed Tower
 Abu Dhabi,Airport Road,Diplomatic Area 
 Abu Dhabi,Al Badaa,Al Badaa,Al Badaa
 Abu Dhabi,Al Bahia,Al Bahia,Al Bahia
-Abu Dhabi,Al Baraha, 
+Abu Dhabi,Al Baraha
 Abu Dhabi,Al Bateen,Al Bateen,Al Bateen Airport
 Abu Dhabi,Al Bateen,Al Bateen,Al Bateen Villas
 Abu Dhabi,Al Bateen,Al Bateen Wharf,Marasy
@@ -257,7 +257,7 @@ Abu Dhabi,Al Reem Island,Shams Gate District,The ARC
 Abu Dhabi,Al Reem Island,Shams Gate District,The Gate Tower 1
 Abu Dhabi,Al Reem Island,Shams Gate District,The Gate Tower 2
 Abu Dhabi,Al Reem Island,Shams Gate District,The Gate Tower 3
-Abu Dhabi,Al Ruwais, 
+Abu Dhabi,Al Ruwais
 Abu Dhabi,Al Salam Street,Al Salam Street,Al Ferdous Tower
 Abu Dhabi,Al Salam Street,Al Salam Street,Al Gazelle Residence
 Abu Dhabi,Al Salam Street,Al Salam Street,Khalifa Park Tower
@@ -337,7 +337,7 @@ Abu Dhabi,Electra Street,Electra Street,Arzana Tower
 Abu Dhabi,Electra Street,Electra Street,Electra Tower
 Abu Dhabi,Electra Street,Electra Street,Global Tower
 Abu Dhabi,Electra Street,Electra Street,Sama Tower
-Abu Dhabi,Ghantoot, 
+Abu Dhabi,Ghantoot
 Abu Dhabi,Grand Mosque District,Desert Village,Desert Village
 Abu Dhabi,Grand Mosque District,Rihan Heights,Rihan Heights
 Abu Dhabi,Hamdan Street,East Corniche road,Hamdan Tower
@@ -548,7 +548,7 @@ Ajman,Ajman Downtown,Horizon Towers,Horizon Towers
 Ajman,Ajman Downtown,Times Square,Times Square
 Ajman,Ajman Industrial Area,Ajman Industrial 1,Ajman Industrial 1
 Ajman,Ajman Industrial Area,Ajman Industrial 2,Ajman Industrial 2
-Ajman,Ajman Meadows, 
+Ajman,Ajman Meadows
 Ajman,Ajman Uptown,Ajman Boulevard,Ajman Boulevard
 Ajman,Ajman Uptown,Ajman One,Ajman One Tower 1
 Ajman,Ajman Uptown,Ajman One,Ajman One Tower 10
@@ -694,7 +694,7 @@ Ajman,Marmooka City,Marmooka City,Tulip Residence
 Ajman,Marmooka City,Shami Garden Towers,Shami Garden Tower I
 Ajman,Marmooka City,Shami Garden Towers,Shami Garden Tower II
 Ajman,Masfoot,Masfoot 
-Ajman,Musheiref, 
+Ajman,Musheiref
 Ajman,New industrial area,New industrial area,New industrial area
 Ajman,Park View City,Century Towers,Century Tower 1
 Ajman,Park View City,Century Towers,Century Tower 2
@@ -702,22 +702,22 @@ Ajman,Park View City,ICT Towers,ICT Tower 1
 Ajman,Park View City,ICT Towers,ICT Tower 2
 Ajman,Park View City,Park View City,Park View Tower
 Ajman,Sheikh Khalifa Bin Zayed Street,Sheikh Khalifa Bin Zayed Street,Sonya Tower
-Al Ain,Al Ain Industrial Area, 
-Al Ain,Al Buraymi, 
-Al Ain,Al Faqa’a, 
+Al Ain,Al Ain Industrial Area
+Al Ain,Al Buraymi
+Al Ain,Al Faqa’a
 Al Ain,Al Hili,Al Hilli,Hili Rayhaan by Rotana
 Al Ain,Al Hili,Beda Bint Soud 
 Al Ain,Al Jaheli,Al Jaheli 
-Al Ain,Al Jimi, 
-Al Ain,Al Khabisi, 
+Al Ain,Al Jimi
+Al Ain,Al Khabisi
 Al Ain,Al Manaseer,Al Manaseer 
-Al Ain,Al Maqam, 
+Al Ain,Al Maqam
 Al Ain,Al Markhaniya,Green Land Compound 
 Al Ain,Al Mutarad,Al Mutarad 
 Al Ain,Al Oyoun Village,Al Oyoun Village 
 Al Ain,Al Sinaiya,Al Sinaiya 
-Al Ain,Al Tawiya, 
-Al Ain,Tawam, 
+Al Ain,Al Tawiya
+Al Ain,Tawam
 Al Ain,Zakher,Shaab Al Askar 
 Dubai,Academic City,Block 3,Block 3
 Dubai,Academic City,Block 5,Block 5
@@ -1394,7 +1394,7 @@ Dubai,Downtown Jebel Ali,The Galleries,The Galleries 1
 Dubai,Downtown Jebel Ali,The Galleries,The Galleries 2
 Dubai,Downtown Jebel Ali,The Galleries,The Galleries 3
 Dubai,Downtown Jebel Ali,The Galleries,The Galleries 4
-Dubai,Dubai Design District, 
+Dubai,Dubai Design District
 Dubai,Dubai Festival City,Dubai Festival City,Al Badia Hillside Village
 Dubai,Dubai Festival City,Dubai Festival City,Al Badia Residences
 Dubai,Dubai Festival City,Dubai Festival City,Festival Tower
@@ -3093,7 +3093,7 @@ Dubai,Zabeel,Zabeel 1,Zabeel 1
 Dubai,Zabeel,Zabeel 2,Khafajy Building
 Dubai,Zabeel,Zabeel Road,Zabeel Road
 Fujairah,corniche Al Fujairah,corniche Al Fujairah,cornich Al Fujairah
-Fujairah,Deba Al Fujairah, 
+Fujairah,Deba Al Fujairah
 Fujairah,Downtown Fujairah,Al Fanar Towers,Al Fanar 1
 Fujairah,Downtown Fujairah,Al Fanar Towers,Al Fanar 2
 Fujairah,Sheikh Hamad Bin Abdullah St.,Sheikh Hamad Bin Abdullah St.,Al Jaber Tower
@@ -3136,7 +3136,7 @@ Ras Al Khaimah,Al Marjan Island,Pacific,Pacific Bora Bora
 Ras Al Khaimah,Al Marjan Island,Pacific,Pacific Polynesia
 Ras Al Khaimah,Al Marjan Island,Pacific,Pacific Samoa
 Ras Al Khaimah,Al Marjan Island,Pacific,Pacific Tonga
-Ras Al Khaimah,Al Nakheel, 
+Ras Al Khaimah,Al Nakheel
 Ras Al Khaimah,Al Qusaidat,Al Qusaidat 
 Ras Al Khaimah,City Downtown,Al seer 
 Ras Al Khaimah,City Downtown,Commercial Centre 
@@ -3182,10 +3182,10 @@ Ras Al Khaimah,Mina Al Arab,The Lagoons,Lagoon B6
 Ras Al Khaimah,Mina Al Arab,The Lagoons,Lagoon B7
 Ras Al Khaimah,Mina Al Arab,The Lagoons,Lagoon B8
 Ras Al Khaimah,Mina Al Arab,The Lagoons,Lagoon B9
-Ras Al Khaimah,RAK Industrial and Technology Park, 
+Ras Al Khaimah,RAK Industrial and Technology Park
 Ras Al Khaimah,Ras Al Khaimah Creek,Julfar Towers,Julfar Commercial Tower
 Ras Al Khaimah,Ras Al Khaimah Creek,Julfar Towers,Julfar Residence Tower
-Ras Al Khaimah,Ras al Khaimah Gateway, 
+Ras Al Khaimah,Ras al Khaimah Gateway
 Ras Al Khaimah,Ras Al Khaimah Waterfront,The cove,The cove
 Ras Al Khaimah,Saraya Islands,Saraya Islands 
 Ras Al Khaimah,Sheikh Mohammed Bin Zayed Road,Sheikh Mohammed Bin Zayed Road,The Cove Rotana
@@ -3200,7 +3200,7 @@ Sharjah,Al Badie,Hoshi,Hoshi 1
 Sharjah,Al Badie,Hoshi,Hoshi 2
 Sharjah,Al Butina,Al Butina,Al Butina
 Sharjah,Al Ettihad Street,Al Ettihad Street,Al Ettihad Street
-Sharjah,Al Fayha, 
+Sharjah,Al Fayha
 Sharjah,Al Garayen,Al Garayen 
 Sharjah,Al Ghafeyah area,Al Ghafeyah area,Al Ghafeyah area
 Sharjah,Al Gharb,Al Ghuair,Al Ghuair
@@ -3252,7 +3252,7 @@ Sharjah,Al Majaz,Palm Towers,Palm Tower 2
 Sharjah,Al Majaz,Palm Towers,Palm Tower 3
 Sharjah,Al Mamzar - Sharjah,Al Mamzar,Magestic Tower
 Sharjah,Al Mujarrah,Al Mujarrah 
-Sharjah,Al Nabba, 
+Sharjah,Al Nabba
 Sharjah,Al Nahda - Sharjah,Al Nadha Residential Complex 
 Sharjah,Al Nahda - Sharjah,Al Nahda-sharjah,Al Ahlam Tower
 Sharjah,Al Nahda - Sharjah,Al Nahda-sharjah,Al Nada Tower
@@ -3270,7 +3270,7 @@ Sharjah,Al Nahda - Sharjah,Sahara Complex,Sahara Tower 3
 Sharjah,Al Nahda - Sharjah,Sahara Complex,Sahara Tower 4
 Sharjah,Al Nahda - Sharjah,Sahara Complex,Sahara Tower 5
 Sharjah,Al Nahda - Sharjah,Sharjah Gate,Sharjah Gate
-Sharjah,Al Nasreya, 
+Sharjah,Al Nasreya
 Sharjah,Al Nouf,Al Nouf 1,Al Nouf 1
 Sharjah,Al Nouf,Al Nouf 2,Al Nouf 2
 Sharjah,Al Nouf,Al Nouf 3,Al Nouf 3

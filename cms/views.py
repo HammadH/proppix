@@ -1134,4 +1134,6 @@ def get_subcommunity_for_building(building):
 			subcommunity = row[-2]
 			break
 	csvfile.close()
-	return subcommunity
+	if subcommunity:
+		return subcommunity
+	else: return None
