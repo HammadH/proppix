@@ -976,6 +976,7 @@ def convert_to_pf_v2(soup):
 		subcommunity = get_subcommunity_for_building(building.text)
 		if subcommunity:
 			subcommunity_tag.append(subcommunity)
+			property_name_tag.append(building.text)
 		else:
 			subcommunity_tag.append(building.text)
 			property_name_tag.append(building.text)
