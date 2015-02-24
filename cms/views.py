@@ -1131,11 +1131,10 @@ def convert_to_pf_v2(soup):
 def get_subcommunity_for_building(building):
 	csvfile = open(settings.PF_LOCATION_LIST, 'r')
 	reader = csv.reader(csvfile)
+	subcommunity = None
 	for row in reader:
 		if row[-1] == building:
 			subcommunity = row[-2]
 			break
 	csvfile.close()
-	if subcommunity:
-		return subcommunity
-	else: return None
+	return subcommunity
