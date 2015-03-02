@@ -877,6 +877,12 @@ class IssmoPropertyFinderLive(View):
 	def post(self, request, *args, **kwargs):
 		print 'pf got post'
 		soup = BeautifulSoup(request.POST.get('<?xml version', None))
+
+		try:
+			agent_email = soup.find('reagent').email.text
+		except:
+			agent_email = None
+
 		pf_soup, operation, errors = convert_to_pf(soup)
 		
 		if pf_soup is not None:
@@ -911,11 +917,6 @@ class IssmoPropertyFinderLive(View):
 			output_feed_file.write(str(pf_feed))
 			full_dump_file.write(str(pf_feed))
 			
-			try:
-				agent_email = pf_soup.find('agent_email').text
-			except:
-				agent_email = None
-
 			if not errors:
 				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
 				'successful on PropertyFinder' %reference_number,
