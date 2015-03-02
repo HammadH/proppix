@@ -192,9 +192,9 @@ class IssmoDubizzleLive(View):
 					full_dump_file.write(str(dbz_feed))
 				if errors:
 					send_mail('%s: Successful on dubizzle' %ref_no, 'Please take care of the following \n %s' %[error for error in errors],
-					 PROPPIX, [agent_email,])
+					 PROPPIX, [agent_email, PROPPIX])
 				else:
-					send_mail('%s: Successful on dubizzle' %ref_no, 'Listing was published without any errors', PROPPIX, [agent_email, ])
+					send_mail('%s: Successful on dubizzle' %ref_no, 'Listing was published without any errors', PROPPIX, [agent_email, PROPPIX])
 				return HttpResponse(status=201)
 						#return HttpResponse(dbz_soup, content_type="application/xhtml+xml")
 			else:
@@ -202,7 +202,7 @@ class IssmoDubizzleLive(View):
 					ref_no = soup.find('mlsnumber').text
 				except:
 					ref_no = None
-				send_mail('%s: Failed on dubizzle' %ref_no, '%s' %[error for error in errors], PROPPIX, [agent_email,])
+				send_mail('%s: Failed on dubizzle' %ref_no, '%s' %[error for error in errors], PROPPIX, [agent_email, PROPPIX])
 				return HttpResponse(status=404)
 
 def convert_to_platform(soup):
@@ -877,10 +877,9 @@ class IssmoPropertyFinderLive(View):
 	def post(self, request, *args, **kwargs):
 		print 'pf got post'
 		soup = BeautifulSoup(request.POST.get('<?xml version', None))
-		pf_soup = convert_to_pf(soup)
+		pf_soup, operation, errors = convert_to_pf(soup)
 		
 		if pf_soup is not None:
-			pf_soup, operation = pf_soup[0], pf_soup[1]
 			feed_file = open(settings.PF_HOURLY_XML, 'rb+', bufsize)
 			feed_file_soup = BeautifulSoup(feed_file)
 			try:
@@ -908,14 +907,36 @@ class IssmoPropertyFinderLive(View):
 				feed_file_soup.append(pf_soup)
 			
 			pf_feed.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-			pf_feed.attrs['listing_count'] = len(pf_feed.find_all('property'))
+			pf_feed.attrs['listing_count'] = len(pf_feed.find_all('property')) + 1
 			output_feed_file.write(str(pf_feed))
 			full_dump_file.write(str(pf_feed))
+			
+			try:
+				agent_email = pf_soup.find('agent_email').text
+			except:
+				agent_email = None
+
+			if not errors:
+				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
+				'successful on PropertyFinder' %reference_number,
+				 PROPPIX, [agent_email, PROPPIX])
+			else:
+				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
+				'published with on PropertyFinder but has errors: \n %s' %(reference_number,[error for error in errors]),
+				 PROPPIX, [agent_email, PROPPIX])
+
 			return HttpResponse(status=201)
 		else:
-			return Http404('pf soup returned None')
+			if soup.find('mlsnumber'):
+				reference_number = soup.find('mlsnumber').text
+			else: reference_number = None
+			send_mail('%s Listing failed to publish' %reference_number, "%s" %[error for error in pf_soup[1]], 
+			PROPPIX, [agent_email, PROPPIX ])
+			return HttpResponse(status=404)
 
 def convert_to_pf(soup):
+	errors = []
+
 	pf_soup = BeautifulSoup("<property last_update=''></property>")
 	property_tag = pf_soup.property
 	
@@ -938,13 +959,10 @@ def convert_to_pf(soup):
 		reference_number_tag.append(CData(reference_number))
 		property_tag.append(reference_number_tag)
 	else:
-		# message = "Missing reference no!"
-		# if  pf_soup.find('email') is not None:
-		# 	_to = pf_soup.find('email').text
-		# else:
-		# 	_to = DALY
-		# send_mail(message, str(pf_soup), _to)
-		return None
+		err = 'missing reference number'
+		errors.append(err)
+		print err
+		return (None, operation, errors)
 
 	print 'ref checked'
 
@@ -965,7 +983,10 @@ def convert_to_pf(soup):
 		offering_type_tag.append(CData(offering_type))
 		property_tag.append(offering_type_tag)
 	else:
-		return None
+		err = 'incorrect reference number'
+		errors.append(err)
+		print err
+		return (None, operation, errors)
 
 	# property_type
 	if codes[1]:
@@ -974,7 +995,16 @@ def convert_to_pf(soup):
 		elif codes[1] in VILLA:
 			property_type = 'VH'
 		elif codes[1] in SUBTYPE_COMMERCIAL:
-			property_type = 'CO'
+			if codes[2] and codes[2] in COMMERCIAL_CODES:
+				if codes[2] == 'RE':
+					property_type = 'RE'
+				elif codes[2] == 'OF':
+					property_type = 'OF'
+				elif codes[2] == 'IN':
+					property_type = 'WH'
+				elif codes[2] == 'ST':
+					property_type = 'ST'
+
 		property_type_tag = pf_soup.new_tag('property_type')
 		property_type_tag.append(CData(property_type))
 		property_tag.append(property_type_tag)
@@ -988,35 +1018,65 @@ def convert_to_pf(soup):
 		price_tag.append(CData(price.text))
 		property_tag.append(price_tag)
 	else:
-		return None
+		err = 'No price'
+		errors.append(err)
+		print err
+		return (None, operation, errors)
+	
 	print 'price check'
 		
 	#city
 	city = soup.find('city')
 	if city:
-		city_tag = pf_soup.new_tag('city')
-		city_tag.append(CData(city.text))
-		property_tag.append(city_tag)
+		if city.text.lower() in CITY_CODES.keys():
+			city_tag = pf_soup.new_tag('city')
+			city_tag.append(CData(city.text))
+			property_tag.append(city_tag)
+		else:	
+			err = 'Incorrect city name'
+			errors.append(err)
+			print err
+			return (None, operation, errors)
+	else:
+		err = "city name is missing"
+		errors.append(err)
+		print err
+		return (None, operation, errors)
 
 	print 'city'
-
 	# community
 	community = soup.find('listingarea')
-	if community.text:
+	if community:
 		community_tag = pf_soup.new_tag('community')
-		subcommunity_tag = pf_soup.new_tag('subcommunity')
 		community_tag.append(CData(community.text))
-		subcommunity_tag.append(CData(community.text))
 		property_tag.append(community_tag)
-		property_tag.append(subcommunity_tag)
+	else:
+		err = "No area name provided"
+		errors.append(err)
+		return (None, operation, errors)
 
-	print 'community'
+	print 'community checked'
 
 	# building
 	building = soup.find('buildingfloor')
 	property_name_tag = pf_soup.new_tag('property_name')
-	if building.text:
-		property_name_tag.append(CData(building.text))
+	subcommunity_tag = pf_soup.new_tag('sub_community')
+	if building:
+		subcommunity = get_subcommunity_for_building(building.text)
+		if subcommunity:
+			subcommunity_tag.append(CData(subcommunity))
+			property_name_tag.append(CData(building.text))
+		else:
+			subcommunity_tag.append(CData(building.text))
+			property_name_tag.append(CData(building.text))
+			err = "Wrong building name. Please check and enter the official name." 
+			errors.append(err)
+			print err
+	else:
+		err = "No building name provided" 
+		errors.append(err)
+		print err
+	property_tag.append(subcommunity_tag)
 	property_tag.append(property_name_tag)
 
 	# title
@@ -1026,7 +1086,9 @@ def convert_to_pf(soup):
 		title_tag.append(CData(title.text))
 		property_tag.append(title_tag)
 	else:
-		return None
+		err = "No title provided" 
+		errors.append(err)
+		return (None, operation, errors)
 
 	# description
 	description = soup.find('publicremark')
@@ -1034,6 +1096,10 @@ def convert_to_pf(soup):
 		description_tag = pf_soup.new_tag('description_en')
 		description_tag.append(CData(description.text))
 		property_tag.append(description_tag)
+	else:
+		err = "No description provided" 
+		errors.append(err)
+		return (None, operation, errors)
 
 	print 'description checked'
 	# amenities
@@ -1048,6 +1114,10 @@ def convert_to_pf(soup):
 		size_tag = pf_soup.new_tag('size')
 		size_tag.append(CData(size.text))
 		property_tag.append(size_tag)
+	else:
+		err = "No size provided" 
+		errors.append(err)
+		return (None, operation, errors)
 
 	# bedroom
 	bedrooms = soup.find('bedrooms')
@@ -1058,6 +1128,10 @@ def convert_to_pf(soup):
 		else:
 			bedrooms_tag.append(CData(bedrooms.text))
 		property_tag.append(bedrooms_tag)
+	else:
+		err = "No bedrooms provided" 
+		errors.append(err)
+		return (None, operation, errors)
 
 	print 'bedrooms checked'
 
@@ -1133,7 +1207,7 @@ def convert_to_pf(soup):
 			property_tag.append(photo_tag)
 
 	property_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-	return (pf_soup, operation) 
+	return (pf_soup, operation, errors) 
 
 
 
