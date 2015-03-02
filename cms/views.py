@@ -929,8 +929,9 @@ class IssmoPropertyFinderLive(View):
 		else:
 			if soup.find('mlsnumber'):
 				reference_number = soup.find('mlsnumber').text
-			else: reference_number = None
-			send_mail('%s Listing failed to publish' %reference_number, "%s" %[error for error in pf_soup[1]], 
+			else: 
+				reference_number = None
+			send_mail('%s Listing failed to publish' %reference_number, "%s" %[error for error in errors], 
 			PROPPIX, [agent_email, PROPPIX ])
 			return HttpResponse(status=404)
 
