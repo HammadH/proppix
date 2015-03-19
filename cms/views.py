@@ -922,7 +922,7 @@ class IssmoPropertyFinderLive(View):
 				'successful on PropertyFinder' %reference_number,
 				 PROPPIX, [agent_email, PROPPIX])
 			else:
-				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
+				send_mail('%s: Failed on PropertyFinder' %reference_number, '%s was '
 				'published with on PropertyFinder but has errors: \n %s' %(reference_number,[error for error in errors]),
 				 PROPPIX, [agent_email, PROPPIX])
 
@@ -1573,3 +1573,135 @@ def get_subcommunity_for_building(building):
 			break
 	csvfile.close()
 	return subcommunity
+
+def convert_to_pfv3(soup):
+	ff = open('/home/dubizzle/pfv3.xml', 'w+')
+	"""emergency scipt to convert v2 to v3. FUCK THIS"""
+	listings = soup.find_all('listing')
+	for listing in listings:
+		l = listing
+		pf_soup = BeautifulSoup("<property last_update=''></property>")
+		property_tag = pf_soup.property
+
+		reference_number_tag = pf_soup.new_tag('reference_number')
+		reference_number_tag.append(CData(l.reference.text))
+		property_tag.append(reference_number_tag)
+
+		offering_type_tag = pf_soup.new_tag('offering_type')
+		if l.category.text == "Residential for Sale":
+			offering_type_tag.append(CData("RS"))
+		elif l.category.text == "Commercial for Sale":
+			offering_type_tag.append(CData("CS"))
+		if l.category.text == "Residential for Rent":
+			offering_type_tag.append(CData("RR"))
+		elif l.category.text == "Commercial for Rent":
+			offering_type_tag.append(CData("CR"))
+
+		property_tag.append(offering_type_tag)
+
+		property_type_tag = pf_soup.new_tag('property_type')
+		if l.type.text == "Apartment":
+			property_type_tag.append(CData("AP"))
+		elif l.type.text == "Villa":
+			property_type_tag.append(CData("VH"))
+		elif l.type.text == "Retail":
+			property_type_tag.append(CData("RE"))
+		elif l.type.text == "Office Space":
+			property_type_tag.append(CData("OF"))
+		elif l.type.text == "Warehouse":
+			property_type_tag.append(CData("WH"))
+		elif l.type.text == "Staff Accommodation":
+			property_type_tag.append(CData("ST"))
+
+		property_tag.append(property_type_tag)
+
+		price_tag = pf_soup.new_tag('price')
+		price_tag.append(CData(l.price.text))
+		property_tag.append(price_tag)
+
+		city_tag = pf_soup.new_tag('city')
+		if l.city:
+			city_tag.append(CData(l.city.text))
+		property_tag.append(city_tag)
+
+		community_tag = pf_soup.new_tag('community')
+		if l.community:
+			community_tag.append(CData(l.community.text))
+		property_tag.append(community_tag)
+
+		property_name_tag = pf_soup.new_tag('property_name')
+		subcommunity_tag = pf_soup.new_tag('sub_community')
+		if l.subcommunity:
+			subcommunity_tag.append(CData(l.subcommunity.text))
+		if l.property:
+			property_name_tag.append(CData(l.property.text))
+		property_tag.append(subcommunity_tag)
+		property_tag.append(property_name_tag)
+
+		title_tag = pf_soup.new_tag('title_en')
+		title_tag.append(CData(l.title_en.text))
+		property_tag.append(title_tag)
+
+		description_tag = pf_soup.new_tag('description_en')
+		description_tag.append(CData(l.description_en.text))
+		property_tag.append(description_tag)
+
+		size_tag = pf_soup.new_tag('size')
+		if l.sqft:
+			size_tag.append(CData(l.sqft.text))
+		property_tag.append(size_tag)
+
+		bedrooms_tag = pf_soup.new_tag('bedroom')
+		if l.bedroom:
+			bedrooms_tag.append(CData(l.bedroom.text))
+		property_tag.append(bedrooms_tag)
+
+		bathrooms_tag = pf_soup.new_tag('bathroom')
+		if l.bathroom:
+			bathrooms_tag.append(CData(l.bathroom.text))
+		property_tag.append(bathrooms_tag)
+
+		agent_tag = pf_soup.new_tag('agent')
+		
+		#name
+		
+		
+		agent_name_tag = pf_soup.new_tag('name')
+		agent_name_tag.append(CData(l.agent_name.text))
+		agent_tag.append(agent_name_tag)
+
+		#email
+		
+		email_tag = pf_soup.new_tag('email')
+		email_tag.append(CData(l.agent_email.text))
+		agent_tag.append(email_tag)
+
+		#phone
+		
+		cellphone_tag = pf_soup.new_tag('phone')
+		cellphone_tag.append(CData(l.agent_phone.text))
+		agent_tag.append(cellphone_tag)
+
+		property_tag.append(agent_tag)
+
+		import re
+
+		photos = l.find_all(re.compile('photo_url_[\d]+'))
+		photo_tag = pf_soup.new_tag('photo')
+		for photo in photos:
+			url_tag = pf_soup.new_tag('url')
+			url_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+			url_tag.append(CData(photo.text))
+			photo_tag.append(url_tag)
+
+		property_tag.append(photo_tag)
+		property_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+		ff.write(str(property_tag))
+
+
+
+
+
+
