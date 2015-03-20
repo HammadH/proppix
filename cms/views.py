@@ -1196,6 +1196,7 @@ def convert_to_pf(soup):
 	#photos
 	images = soup.find_all('picture')
 	if images:
+		images = order_images(images)
 		print 'going in build_images'
 		image_urls = build_images(images, refno=reference_number)
 		if image_urls:
@@ -1211,8 +1212,17 @@ def convert_to_pf(soup):
 	property_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 	return (pf_soup, operation, errors) 
 
-
-
+def order_images(image_list_soup):
+	ordered_images = []
+	for image in image_list_soup:
+		image_number = image.find('picturecaption').text.split('.')[1].strip()
+		for order in range(1, len(image_list_soup)+1):
+			if str(order) == image_number:
+				ordered_images.append(image)
+				break
+			else:
+				continue
+	return ordered_images
 
 class IssmoPropertyFinderLive_V2(View):
 	def get(self, request, *args, **kwargs):
