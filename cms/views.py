@@ -885,7 +885,7 @@ class IssmoPropertyFinderFull(View):
 
 class IssmoPropertyFinderLive(View):
 	def get(self, request, *args, **kwargs):
-		return HttpResponse(open(settings.PF_HOURLY_XML), content_type="text/xml; charset=utf-8")
+		return HttpResponse(open(settings.PF_HOURLY_XML).read(), content_type="text/xml; charset=utf-8")
 
 	def post(self, request, *args, **kwargs):
 		print 'pf got post'
@@ -899,6 +899,7 @@ class IssmoPropertyFinderLive(View):
 		pf_soup, operation, errors = convert_to_pf(soup)
 		
 		if pf_soup is not None:
+			print 'reading file'
 			feed_file = open(settings.PF_HOURLY_XML, 'rb+', bufsize)
 			feed_file_soup = BeautifulSoup(feed_file)
 			try:
@@ -916,7 +917,9 @@ class IssmoPropertyFinderLive(View):
 				reference_number = pf_soup.find('reference_number').text
 			elif operation == "REMOVE":
 				reference_number = soup.find('mlsnumber').text
+			print operation
 			existing_listing = feed_file_soup.find('reference_number', text=reference_number)
+			print 'existing listing %s' %existing_listing
 			if operation == "APPEND/REPLACE" and existing_listing:
 				existing_listing.parent.decompose()
 				feed_file_soup.append(pf_soup)
@@ -931,7 +934,7 @@ class IssmoPropertyFinderLive(View):
 			pf_feed.attrs['listing_count'] = len(pf_feed.find_all('property')) + 1
 			output_feed_file.write(str(pf_feed))
 			full_dump_file.write(str(pf_feed))
-			
+			print 'finished writing to file'
 			if not errors:
 				send_mail('%s: Successful on PropertyFinder' %reference_number, '%s was '
 				'successful on PropertyFinder' %reference_number,
@@ -943,6 +946,7 @@ class IssmoPropertyFinderLive(View):
 
 			return HttpResponse(status=201)
 		else:
+			print 'soup was none'
 			if soup.find('mlsnumber'):
 				reference_number = soup.find('mlsnumber').text
 			else: 
@@ -1216,17 +1220,22 @@ def convert_to_pf(soup):
 		images = order_images(images)
 		print 'going in build_images'
 		image_urls = build_images(images, refno=reference_number)
+		print image_urls
 		if image_urls:
 			photo_tag = pf_soup.new_tag('photo')
 			for url in image_urls:
 				url_tag = pf_soup.new_tag('url')
+				print url_tag
 				url_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+				print url_tag
 				url_tag.append(CData(url))
 				photo_tag.append(url_tag)
+				print photo_tag
 
 			property_tag.append(photo_tag)
-
+	print 'adding images complete'
 	property_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+	print 'returning....'
 	return (pf_soup, operation, errors)
 
 class IssmoPropertyFinderLive_V2(View):
