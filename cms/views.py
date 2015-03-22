@@ -861,7 +861,7 @@ def build_images(images, refno):
 						continue
 		print "unordered urls"
 		print image_urls
-		ordered_image_urls = ordered_images(image_urls)
+		ordered_image_urls = order_images(image_urls)
 		print "ordered images"
 		print ordered_image_urls
 		return ordered_image_urls
