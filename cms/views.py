@@ -805,10 +805,9 @@ def build_image_path(refno, imgId=None, imgCaption=None):
 				except Exception, e:
 						print e
 				paths = {
-				'full_img_path' : settings.MEDIA_ROOT + folder_path + imgId,
-				'media_path' : "media" + folder_path + imgId
+				'full_img_path' : settings.MEDIA_ROOT + folder_path + imgId + imgCaption,
+				'media_path' : "media" + folder_path + imgId + imgCaption
 				}
-
 				return paths
 
 def watermark_image(image):
@@ -842,7 +841,7 @@ def build_images(images, refno):
 					img = Image.open(imgfile)
 					print 'image opened'
 					imgId = image.pictureid.text.strip('{,}')
-					imgCaption = image.picturecaption.text
+					imgCaption = image.picturecaption.text.split('.')[1].strip()
 					img_paths = build_image_path(refno, imgId, imgCaption)
 					full_img_path = img_paths['full_img_path'] + '.' + content_type.lower()
 
@@ -860,11 +859,24 @@ def build_images(images, refno):
 				except Exception,e:
 						print e
 						continue
+		print "unordered urls"
 		print image_urls
-		return image_urls
+		ordered_image_urls = ordered_images(image_urls)
+		print "ordered images"
+		print ordered_image_urls
+		return ordered_image_urls
 
-
-
+def order_images(image_urls):
+	print 'ordering images'
+	ordered_images = []
+	matches = []
+	for i in range(1, len(image_urls)+1):
+		for image in image_urls:
+			if "other_%s" %i in image:
+				matches.append(image)
+	remaining = [i for i in image_urls if i not in matches]
+	ordered_images = matches + remaining
+	return ordered_images
 
 class IssmoPropertyFinderFull(View):
 	def get(self, request, *args, **kwargs):
@@ -1215,20 +1227,7 @@ def convert_to_pf(soup):
 			property_tag.append(photo_tag)
 
 	property_tag.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-	return (pf_soup, operation, errors) 
-
-def order_images(image_list_soup):
-	print 'ordering images'
-	ordered_images = []
-	for image in image_list_soup:
-		image_number = image.find('picturecaption').text.split('.')[1].strip()
-		for order in range(1, len(image_list_soup)+1):
-			if str(order) == image_number:
-				ordered_images.append(image)
-				break
-			else:
-				continue
-	return ordered_images
+	return (pf_soup, operation, errors)
 
 class IssmoPropertyFinderLive_V2(View):
 	def get(self, request, *args, **kwargs):
