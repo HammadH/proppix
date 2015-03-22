@@ -1584,6 +1584,7 @@ def get_subcommunity_for_building(building):
 	reader = csv.reader(csvfile)
 	subcommunity = None
 	for row in reader:
+		print row, building
 		if row[-1] == building:
 			subcommunity = row[-2]
 			break
