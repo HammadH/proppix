@@ -860,6 +860,7 @@ def build_images(images, refno):
 				except Exception,e:
 						print e
 						continue
+		print image_urls
 		return image_urls
 
 
@@ -902,7 +903,7 @@ class IssmoPropertyFinderLive(View):
 			if operation == "APPEND/REPLACE":				
 				reference_number = pf_soup.find('reference_number').text
 			elif operation == "REMOVE":
-				reference_number = pf_soup.find('mlsnumber').text
+				reference_number = soup.find('mlsnumber').text
 			existing_listing = feed_file_soup.find('reference_number', text=reference_number)
 			if operation == "APPEND/REPLACE" and existing_listing:
 				existing_listing.parent.decompose()
@@ -911,6 +912,8 @@ class IssmoPropertyFinderLive(View):
 				existing_listing.parent.decompose()
 			elif operation == "APPEND/REPLACE" and not existing_listing:
 				feed_file_soup.append(pf_soup)
+			elif operation == "REMOVE" and not existing_listing:
+				pass
 			
 			pf_feed.attrs['last_update'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 			pf_feed.attrs['listing_count'] = len(pf_feed.find_all('property')) + 1
@@ -944,6 +947,7 @@ def convert_to_pf(soup):
 	
 	operation = "APPEND/REPLACE"
 
+
 	#status
 	status = soup.find('listingstatus')
 	if status:
@@ -967,6 +971,7 @@ def convert_to_pf(soup):
 		return (None, operation, errors)
 
 	print 'ref checked'
+	print operation
 
 	#offering type
 	codes = reference.text.split('-')
@@ -1213,6 +1218,7 @@ def convert_to_pf(soup):
 	return (pf_soup, operation, errors) 
 
 def order_images(image_list_soup):
+	print 'ordering images'
 	ordered_images = []
 	for image in image_list_soup:
 		image_number = image.find('picturecaption').text.split('.')[1].strip()
