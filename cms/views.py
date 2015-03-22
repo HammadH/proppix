@@ -872,7 +872,7 @@ def order_images(image_urls):
 	matches = []
 	for i in range(1, len(image_urls)+1):
 		for image in image_urls:
-			if "other_%s" %i in image:
+			if "other%s" %i in image:
 				matches.append(image)
 	remaining = [i for i in image_urls if i not in matches]
 	ordered_images = matches + remaining
@@ -1583,7 +1583,6 @@ def get_subcommunity_for_building(building):
 	reader = csv.reader(csvfile)
 	subcommunity = None
 	for row in reader:
-		print row, building
 		if row[-1] == building:
 			subcommunity = row[-2]
 			break
